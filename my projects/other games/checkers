@@ -1,0 +1,134 @@
+import random
+import os
+import time
+import string
+
+white_piece = "⚪ "
+black_piece = "⚫ "
+white_king = " ♔ "
+black_king = " ♚ "
+white_pieces = ["⚪ "," ♔ "]
+black_pieces = ["⚫ "," ♚ "]
+WHITE_BG = "\033[48;2;240;240;220m" 
+BLACK_BG = "\033[48;2;120;100;80m"  
+RESET = "\033[0m" 
+grid = [['   'for row in range(9)]for col in range(9)]
+
+def print_grid():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    for i in range(9):
+        for j in range(9):
+            if i == 8:
+                print(f"{WHITE_BG}{grid[i][j]}{RESET}", end="")
+            elif j == 0:
+                print(f"{WHITE_BG}{grid[i][j]}{RESET}", end="")
+            elif (i+j)%2 == 0:
+                print(f"{BLACK_BG}{grid[i][j]}{RESET}", end="")
+            else:
+                print(f"{WHITE_BG}{grid[i][j]}{RESET}", end="")
+        print()
+
+def start_layout():
+    for i in range(8):
+        grid[i][0] = ' '+str(8-i) + ' '
+    alphabet = list(string.ascii_lowercase)
+    for i in range(8):
+        grid[8][i+1] = ' '+alphabet[i]+' '
+
+    for i in range(3):
+        for j in range(8):
+            if (j+i)%2 == 0:
+                grid[7-i][j+1] = white_piece
+            else:
+                grid[i][j+1] = black_piece
+
+def move():
+    global capture
+    turn = white_pieces
+    while True:
+        if turn == white_pieces:
+            player = 'white'
+        else:
+            player = 'black'
+        
+        chosen = input(player + ' enter the column and the row of your piece or undo ')
+        convert_let = {'a':1,'b':2,'c':3,'d':4,'e':5,'f':6,'g':7,'h':8}
+        try:
+            for letter in chosen:
+                if letter in convert_let:
+                    col = convert_let[letter]
+                else:
+                    row = 8 -  int(letter)
+        except ValueError:
+            print('you didnt enter a valid square')
+            continue
+        if grid[row][col] not in turn:
+            print('you did not pick one of your pieces')
+            continue
+        chosen = input(player + ' enter the column and the row of where your piece should go ')
+        try:
+            for letter in chosen:
+                if letter in convert_let:
+                    new_col = convert_let[letter]
+                else:
+                    new_row = 8 -  int(letter)
+        except ValueError:
+            print('you didnt enter a valid square')
+            continue
+        if legal(row,new_row,col,new_col,turn):
+            grid[new_row][new_col] = grid[row][col]
+            grid[row][col] = '   '
+            if capture:
+                grid[(new_row+row)//2][(new_col+col)//2] = '   '
+            promotion()
+            if win():
+                print(player + ' well done you win')
+                exit()
+            if turn == white_pieces:
+                turn = black_pieces
+            else:
+                turn = white_pieces
+            print_grid()
+        else: 
+            print('illegal move')
+
+def legal(row,new_row,col,new_col,turn):
+    global capture
+    capture = False
+    if 0<=row<8 and 0<=new_row<8 and 0<col<=8 and 0<new_col<=8:
+        if (grid[row][col] == white_piece and new_row-row==-1 and abs(new_col-col)==1) or (grid[row][col] == black_piece and new_row-row==1 and abs(new_col-col)==1) :
+            if grid[new_row][new_col] == '   ':
+                return True
+        if (grid[row][col] == white_piece and new_row-row==-2 and abs(new_col-col)==2) or (grid[row][col] == black_piece and new_row-row==2 and abs(new_col-col)==2) :
+            if grid[new_row][new_col] == '   ':
+                if (grid[(new_row+row)//2][(new_col+col)//2] in black_pieces and turn == white_pieces) or (grid[(new_row+row)//2][(new_col+col)//2] in white_pieces and turn == black_pieces):
+                    capture = True
+                    return True
+        if (grid[row][col] == white_king and abs(new_row-row)==1 and abs(new_col - col) ==1) or (grid[row][col] == black_king and abs(new_row-row)==1 and abs(new_col - col) ==1):
+            if grid[new_row][new_col] == '   ':
+                return True
+        if (grid[row][col] == white_king and abs(new_row-row)==2 and abs(new_col-col)==2) or (grid[row][col] == black_king and abs(new_row-row)==2 and abs(new_col-col)==2) :
+            if grid[new_row][new_col] == '   ':
+                if (grid[(new_row+row)//2][(new_col+col)//2] in black_pieces and turn == white_pieces) or (grid[(new_row+row)//2][(new_col+col)//2] in white_pieces and turn == black_pieces):
+                    capture = True
+                    return True     
+    return False
+
+def promotion():
+    for i in range(8):
+        if grid[0][i] == white_piece:
+            grid[0][i] = white_king
+        if grid[7][i] == black_piece:
+            grid[7][i] = black_king
+
+def win():
+    if all(grid[i][j+1] not in black_pieces for i in range(8) for j in range(8)):
+        return True
+    if all(grid[i][j+1] not in white_pieces for i in range(8) for j in range(8)):
+        return True
+    return False    
+
+
+start_layout()
+print_grid()
+move()
