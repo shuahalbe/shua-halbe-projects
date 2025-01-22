@@ -1,0 +1,98 @@
+
+grid = [['.' for _ in range(7)]for _ in range(6)]
+
+def result():
+    result = '\n'.join('  '.join(row) for row in grid)
+    print(result)
+
+
+def win(row ,col):
+    try:
+        if all(
+                grid[row+i][col] == grid[row][col] and 
+                grid[row][col] != '.' and
+                0 <= row + i < 7 
+                for i in range(4)
+        ):
+            return True
+    except IndexError:
+        pass
+
+    try:       
+        for j in range (-3,1):
+            if all(
+                grid[row][col + i + j] == grid[row][col] and 
+                grid[row][col] != '.' and
+                0 <= col + i + j < 8 
+                for i in range(4)
+            ):
+                return True
+    except IndexError:
+        pass  
+
+    try:
+        for j in range (-3,1):
+            if all(
+                grid[row + i + j][col + i + j] == grid[row][col] and 
+                grid[row][col] != '.' and
+                0 <= col + i + j < 8 and
+                0 <= row + i + j < 7  
+                for i in range(4)
+            ):
+                return True
+    except IndexError:
+        pass
+
+    try: 
+        for j in range (-3,1):       
+            if all(
+                grid[row - i - j][col + i + j] == grid[row][col] and 
+                grid[row][col] != '.' and
+                0 <= row - i - j < 7 and
+                0 <= col + i + j < 8 
+                for i in range(4)
+            ):
+                return True    
+    except IndexError:
+        pass
+
+    return False
+def place_piece(col):
+    global turn
+    for row in range(6):
+        if grid[row][col] == 'X' or grid[row][col] == 'O':
+            row -=1
+            grid[row][col] = turn
+            break
+        elif row == 5:
+            grid[row][col] = turn
+    result()
+    if win(row ,col):
+        print(turn, ' wins')
+        exit()
+    change_turn()
+            
+turn = 'X'
+def change_turn():
+    global turn
+    if turn == 'X':
+        turn = 'O'
+    else:
+        turn = 'X'
+    
+def play():
+    while True:
+        col = int(input('enter column player ' + turn))
+        if 1 <= col < 8:
+            col -=1
+            if grid[0][col] == 'X' or grid[0][col] == 'O':
+                print('column is full please pick empty one')
+                continue
+            else:
+                place_piece(col)
+        else:
+            print('please enter 1-7')
+            continue
+
+result()
+play()

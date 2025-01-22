@@ -1,0 +1,121 @@
+import random
+import time
+
+hardest_grid = [
+    [0, 0, 0, 0, 0, 5, 0, 8, 0],
+    [0, 0, 0, 6, 0, 1, 0, 4, 3],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 0, 5, 0, 0, 0, 0, 0],
+    [0, 0, 0, 1, 0, 6, 0, 0, 0],
+    [3, 0, 0, 0, 0, 0, 0, 0, 5],
+    [5, 3, 0, 0, 0, 0, 0, 6, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 4],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0]
+]
+def create_grid():
+    global grid
+
+    values = [0,1,2,3,4,5,6,7,8,9]
+    random_weights = [70,3,3,3,3,3,3,3,3,3]
+    
+    grid = [[0 for _ in range(9)] for _ in range(9)]
+
+    for row in range(9):
+        for col in range(9):
+            num = random.choices(values, weights = random_weights, k=1)[0]
+            if rules(grid, row, col, num):
+                grid[row][col] = num
+            else:
+                grid[row][col] = 0
+
+
+
+def print_grid():
+
+    row_dividers = ('\n' + 9 * '--- ' + '\n')
+    result = row_dividers.join(' | '.join(map(str, row)) for row in grid)
+    print(result)
+
+def rules(grid, row, col, num):
+    for i in range(9):
+        if grid[row][i] == num:
+            return False
+        
+        # Check the column
+    for i in range(9):
+        if grid[i][col] == num:
+            return False
+        
+        # Check the 3x3 subgrid
+        start_row, start_col = 3 * (row // 3), 3 * (col // 3)
+    for i in range(start_row, start_row + 3):
+        for j in range(start_col, start_col + 3):
+            if grid[i][j] == num:
+                return False
+        
+    return True
+
+def pre_solve():
+    global candidates
+    candidates = [[set(range(1, 10)) if cell == 0 else set() for cell in row] for row in grid]
+    for row in range(9):
+        for col in range(9):
+            if grid[row][col] != 0:
+                for i in range(9):
+                    candidates[row][i].discard(grid[row][col])
+                    candidates[i][col].discard(grid[row][col])
+                start_row , start_col = 3 *(row // 3), 3 * (col // 3)
+                for i in range(start_row , start_row + 3):
+                    for j in range(start_col , start_col + 3): 
+                        candidates[i][j].discard(grid[row][col])
+
+def min_pos():
+    min_possibilities = float('inf')
+    best_cell = None
+
+    for row in range(9):
+        for col in range(9):
+            if grid[row][col] == 0:
+                num_possibilities = len(candidates[row][col])
+                if num_possibilities < min_possibilities:
+                    min_possibilities = num_possibilities
+                    best_cell = (row, col)
+    print(best_cell)
+    return best_cell
+                              
+count = 0
+def solve_sudoku(grid):
+    global count
+    for row in range(9):
+        for col in range(9):
+            if grid[row][col] == 0:
+                for num in candidates[row][col]:
+                
+                    if rules(grid, row, col, num):
+                        grid[row][col] = num
+                        count +=1
+
+                        if solve_sudoku(grid):
+                            return True
+                        grid[row][col] = 0
+                return False
+    return True
+
+create_grid()
+print_grid()
+pre_solve()
+print(candidates)
+action = input('should i solve the grid')
+if action == 'yes':
+    start_time = time.perf_counter()
+    if solve_sudoku(grid):
+        print("Sudoku solved successfully!")
+        print_grid()
+        print(count)
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Time taken: {elapsed_time:.6f} seconds")
+    else:
+        print("No solution exists!")
+else:
+    exit()

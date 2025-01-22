@@ -1,0 +1,269 @@
+import os
+import time
+import random
+
+grid_1 = [['. ' for row in range(10)]for col in range(10)]
+grid_2 = [['. ' for row in range(10)]for col in range(10)]
+grid_1_shots = [['. ' for row in range(10)]for col in range(10)]
+grid_2_shots = [['. ' for row in range(10)]for col in range(10)]
+grid_1_place = [[]for col in range(5)]
+grid_2_place = [[]for col in range(5)]
+placement_map = {'ca':0,'ba':1,'cr':2,'su':3,'de':4}
+
+
+def print_grid_1():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    result = '\n'.join(' '.join(row)for row in grid_1)
+    print(result)
+def print_grid_2():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    result = '\n'.join(' '.join(row)for row in grid_2)
+    print(result)
+def print_grid_2_shots():
+    result = '\n'.join(' '.join(row)for row in grid_2_shots)
+    print(result)
+def print_grid_1_shots():
+    result = '\n'.join(' '.join(row)for row in grid_1_shots)
+    print(result)
+
+pos_ships = set(['ca','ba','cr','su','de'])
+length = {'ca':5,'ba':4,'cr':3,'su':3,'de':2}
+
+def place_ships(choice_ship,turn):
+    if choice_ship in pos_ships:
+        ship_loc =set([])
+        direction = input('should the ship be placed vertical or horizontal(v or h)')
+        place_x = input('enter row co-ordinate of left or top piece of the ship')
+        place_y = input('enter col co-ordinate of left or top piece of the ship')
+        place_x,place_y = int(place_x),int(place_y)
+        if 1<=place_x<11 and 1<=place_y<11:  
+            place_x -=1
+            place_y -=1           
+            if direction == 'v' or direction == 'h':
+                for i in range(length[choice_ship]):
+                    ship_loc.add((place_x,place_y))
+                    if direction == 'v':
+                        place_x+=1
+                    elif direction == 'h':
+                        place_y +=1
+                if turn == 1:
+                    try:
+                        if all(grid_1[r][c] == '. ' for r,c in ship_loc):
+                            for r,c in ship_loc:
+                                grid_1[r][c] = str(choice_ship)
+                                grid_1_place[placement_map[choice_ship]].append((r,c))
+                            pos_ships.remove(choice_ship)
+                    except IndexError:
+                        print('ship went out of bounds')
+                        time.sleep(2)
+                elif turn == 2:
+                    try:
+                        if all(grid_2[r][c] == '. ' for r,c in ship_loc):
+                            for r,c in ship_loc:
+                                grid_2[r][c] = str(choice_ship)
+                                grid_2_place[placement_map[choice_ship]].append((r,c))
+                            pos_ships.remove(choice_ship) 
+                    except IndexError:
+                        print('ship went out of bounds')
+                        time.sleep(2)           
+                else:
+                    print('ships overlap please choose again')
+                    time.sleep(2)
+            else:
+                print('please only enter v or h')
+                time.sleep(2)
+        else:
+            print('please enter only between 1-10')
+            time.sleep(2)
+    else:
+        print('please only enter the first 2 letters of the ship name or your ships already been placed')
+        time.sleep(2)
+        
+def remove_ship(choice_ship , turn):
+    if turn == 1:
+        for row in range(10):
+            for col in range(10):
+                if grid_1[row][col] == str(choice_ship):
+                    grid_1[row][col] = '. '
+                pos_ships.add(choice_ship)
+    if turn == 2:
+        for row in range(10):
+            for col in range(10):
+                if grid_2[row][col] == str(choice_ship):
+                    grid_2[row][col] = '. '
+                pos_ships.add(choice_ship)
+
+
+def autoplace(turn):
+    global grid_1,grid_2,grid_1_place,grid_2_place
+    if turn == 1:
+        grid_1_place = [[]for col in range(5)]
+        grid_1 = [['. ' for row in range(10)]for col in range(10)]
+    if turn ==2:
+        grid_2_place = [[]for col in range(5)]
+        grid_2 = [['. ' for row in range(10)]for col in range(10)]
+    pos_ships = set(['ca','ba','cr','su','de'])
+    length = {'ca':5,'ba':4,'cr':3,'su':3,'de':2}
+    for i in pos_ships:
+        while True:
+            x = random.randint(0,9)
+            y = random.randint(0,9)
+            direction = random.randint(0,1)
+            if direction == 0:
+                if turn == 1:
+                    if all((0<=x+a<=9 and grid_1[x+a][y] == '. ')for a in range(length[i])):
+                        for j in range(length[i]):
+                            grid_1[x+j][y] = i
+                            grid_1_place[placement_map[i]].append((x+j,y))
+                        break
+                if turn == 2:
+                    if all((0<=x+a<=9 and grid_2[x+a][y] == '. ')for a in range(length[i])):
+                        for j in range(length[i]):
+                            grid_2[x+j][y] = i
+                            grid_2_place[placement_map[i]].append((x+j,y))   
+                        break         
+            if direction == 1:
+                if turn == 1:
+                    if all((0<=y+a<=9 and grid_1[x][y+a] == '. ')for a in range(length[i])):
+                        for j in range(length[i]):
+                            grid_1[x][y+j] = i
+                            grid_1_place[placement_map[i]].append((x,y+j))
+                        break
+                if turn == 2:
+                    if all((0<=y+a<=9 and grid_2[x][y+a] == '. ')for a in range(length[i])):
+                        for j in range(length[i]):
+                            grid_2[x][y+j] = i
+                            grid_2_place[placement_map[i]].append((x,y+j))    
+                        break        
+   
+def play_place_ships():
+    global pos_ships
+    turn  = 1
+    print_grid_1()
+    while len(pos_ships) !=0:
+        action = input('player '+str(turn)+ ' please choose\n1:add a ship\n2:remove a ship\n3:autoplace')
+        action = int(action)
+        if action == 1 or action ==2 or action == 3:
+            if action == 3:
+                autoplace(turn)
+                break
+            choice_ship = input('please enter one of the follwing for your ship\nca:carrier - 5\nba:battleship - 4\ncr:cruiser - 3\nsu:submarine - 3\nde:destroyer - 2')
+            if action == 1:
+                place_ships(choice_ship,turn)
+            elif action == 2:
+                remove_ship(choice_ship,turn)
+        else:
+            print('only enter 1 ,2 or 3')
+            time.sleep(2)
+        print_grid_1()
+    turn = 2
+    print_grid_2()
+    pos_ships = set(['ca','ba','cr','su','de'])
+    while len(pos_ships) !=0:
+        action = input('player '+str(turn)+ ' please choose\n1:add a ship\n2:remove a ship\n3:autoplace')
+        action = int(action)
+        if action == 1 or action == 2 or action ==3:
+            if action == 3:
+                autoplace(turn)
+                break
+            choice_ship = input('please enter one of the follwing for your ship\nca:carrier - 5\nba:battleship - 4\ncr:cruiser - 3\nsu:submarine - 3\nde:destroyer - 2')
+            if action ==1:
+                place_ships(choice_ship,turn)
+            elif action == 2:
+                remove_ship(choice_ship,turn)
+        else:
+            print('please only enter 1 ,2 or 3')
+            time.sleep(2)
+        print_grid_2()
+
+def choose_place(turn):
+    while True:
+        place_x = input('please enter row co-ordinate of your shot')
+        place_y = input('please enter col co-ordinate of your shot')
+        place_x,place_y = int(place_x),int(place_y)
+        if 1<=place_x<11 and 1<=place_y<11:
+            place_x -=1
+            place_y -=1
+            if turn == 1:
+                if grid_1_shots[place_x][place_y] == '. ':
+                    if grid_2[place_x][place_y] == '. ':
+                        print('you missed')
+                        time.sleep(2)
+                        grid_1_shots[place_x][place_y] = 'M '
+                    else:
+                        print('you hit')               
+                        grid_1_shots[place_x][place_y] = 'X '
+                        grid_2[place_x][place_y] = 'X '
+                        sunk_ship(turn)
+                        time.sleep(2)
+                    break
+                else:
+                    print('you have already shot there')
+            if turn == 2:
+                if grid_2_shots[place_x][place_y] == '. ':
+                    if grid_1[place_x][place_y] == '. ':
+                        print('you missed')
+                        time.sleep(2)
+                        grid_2_shots[place_x][place_y] = 'M '
+                    else:
+                        print('you hit')
+                        grid_2_shots[place_x][place_y] = 'X '
+                        grid_1[place_x][place_y] = 'X '
+                        sunk_ship(turn)
+                        time.sleep(2)
+                    break
+                else:
+                    print('you have already shot there')
+                    
+
+def sunk_ship(turn):
+    pos_ships = set(['ca','ba','cr','su','de'])
+    ship_names = {'ca':'carrier','ba':'battleship','cr':'cruiser','su':'submarine','de':'destroyer'}
+    for i in pos_ships:
+        sunk_ship = ''
+        count = 0 
+        for row in range(10):
+            for col in range(10):
+                if turn == 1:
+                    if grid_2[row][col] == i:
+                        count +=1
+                if turn == 2:
+                    if grid_1[row][col] == i:
+                        count +=1
+        if count == 0:
+            sunk_ship = i
+            print('you sunk their '+ ship_names[i]) 
+            if turn ==1:
+                for r,c in grid_2_place[placement_map[i]]:
+                    grid_1_shots [r][c] = i      
+            if turn ==2:
+                for r,c in grid_1_place[placement_map[i]]:
+                    grid_2_shots [r][c] = i   
+            break
+    pos_ships.discard(sunk_ship)  
+
+def play():
+    while True:
+        turn = 1
+        print_grid_1()
+        print('\n\n\n')
+        print_grid_1_shots()
+        choose_place(turn)
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print('next player turn')
+        input('player 2 are you ready')
+        turn = 2
+        print_grid_2()
+        print('\n\n\n')
+        print_grid_2_shots()
+        choose_place(turn)
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print('next player turn')
+        input('player 1 are you ready')
+
+play_place_ships()
+play()
+
+
+
+

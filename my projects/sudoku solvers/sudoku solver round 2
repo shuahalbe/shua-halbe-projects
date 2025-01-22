@@ -1,0 +1,174 @@
+import random
+import time
+import threading
+
+
+def print_grid_periodically():
+    while True:
+        time.sleep(60)  # Wait for 60 seconds
+        print_grid()  # Print the current state of the grid
+
+# Start the timer in a separate thread
+thread = threading.Thread(target=print_grid_periodically)
+thread.daemon = True  # This ensures the thread will exit when the main program exits
+thread.start()
+
+
+hardest_grid = [
+    [9, 0, 0, 8, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 5, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 2, 0, 0, 1, 0, 0, 0, 3],
+    [0, 1, 0, 0, 0, 0, 0, 6, 0],
+    [0, 0, 0, 4, 0, 0, 0, 7, 0],
+    [7, 0, 8, 6, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 3, 0, 1, 0, 0],
+    [4, 0, 0, 0, 0, 0, 2, 0, 0]
+]
+
+def create_grid():
+    global grid
+
+    values = [0,1,2,3,4,5,6,7,8,9]
+    random_weights = [150,3,3,3,3,3,3,3,3,3]
+    
+    grid = [[0 for _ in range(9)] for _ in range(9)]
+
+    for row in range(9):
+        for col in range(9):
+            num = random.choices(values, weights = random_weights, k=1)[0]
+            grid[row][col] = num
+
+
+def print_grid():
+    row_dividers = ('\n' + 9 * '--- ' + '\n')
+    result = row_dividers.join(' | '.join(map(str, row)) for row in grid)
+    print(result)
+
+def check_validty():
+    # Check rows
+    for num in range(1, 10):
+        for row in range(9):
+            count = 0
+            for col in range(9):
+                if grid[row][col] == num:
+                    count += 1
+                if count > 1:
+                    print("No solution: Duplicate in row", row+1)
+                    exit()
+
+    # Check columns
+    for num in range(1, 10):
+        for col in range(9):
+            count = 0
+            for row in range(9):
+                if grid[row][col] == num:
+                    count += 1
+                if count > 1:
+                    print("No solution: Duplicate in column", col+1)
+                    exit()
+
+    # Check 3x3 sub-grids
+    for num in range(1, 10):
+        for start_row in range(0, 9, 3):
+            for start_col in range(0, 9, 3):
+                count = 0
+                for row in range(start_row, start_row + 3):
+                    for col in range(start_col, start_col + 3):
+                        if grid[row][col] == num:
+                            count += 1
+                        if count > 1:
+                            print(f"No solution: Duplicate in 3x3 sub-grid starting at ({start_row+1}, {start_col+1})")
+                            exit()
+
+    print("The grid is valid.")
+
+
+def pre_solve():
+    global candidates
+    candidates = [[set(range(1, 10)) if cell == 0 else set() for cell in row] for row in grid]
+    for row in range(9):
+        for col in range(9):
+            if grid[row][col] != 0:
+                for i in range(9):
+                    candidates[row][i].discard(grid[row][col])
+                    candidates[i][col].discard(grid[row][col])
+                start_row , start_col = 3 *(row // 3), 3 * (col // 3)
+                for i in range(start_row , start_row + 3):
+                    for j in range(start_col , start_col + 3): 
+                        candidates[i][j].discard(grid[row][col])
+    order = sorted(candidates[row][col], key=lambda x: len(candidates[row][col]))
+
+def update_pre_solve(row, col, num):
+    affected_cells = set()
+    for i in range(9):
+        if num in candidates[row][i]:
+            candidates[row][i].discard(num)
+            affected_cells.add((row, i, num))
+        if num in candidates[i][col]:
+            candidates[i][col].discard(num)
+            affected_cells.add((i, col, num))
+    start_row, start_col = 3 * (row // 3), 3 * (col // 3)
+    for i in range(start_row, start_row + 3):
+        for j in range(start_col, start_col + 3):
+            if num in candidates[i][j]:
+                candidates[i][j].discard(num)
+                affected_cells.add((i, j, num))
+    return affected_cells
+
+def backtrack_pre_solve(affected_cells):
+    for r, c , num in affected_cells:
+        candidates[r][c].add(num)
+
+def select_next_cell():
+    # Select the cell with the fewest possible candidates
+    min_len = float('inf')
+    selected_cell = None
+    for row in range(9):
+        for col in range(9):
+            if grid[row][col] == 0:  # Cell is empty
+                num_candidates = len(candidates[row][col])
+                if num_candidates < min_len:
+                    min_len = num_candidates
+                    selected_cell = (row, col)
+    return selected_cell
+    
+
+                    
+count = 0
+def solve_sudoku(grid):
+    global count
+    cell = select_next_cell()
+    if not cell:
+        return True
+    row , col = cell
+    for num in list(candidates[row][col]):
+        grid[row][col] = num
+        count +=1
+        affected_cells = update_pre_solve(row , col , num)
+
+        if solve_sudoku(grid):
+            return True
+        grid[row][col] = 0
+        backtrack_pre_solve(affected_cells)
+    return False
+create_grid()
+print_grid()
+check_validty()
+pre_solve()
+select_next_cell()
+action = input('should i solve the grid')
+if action == 'yes':
+    start_time = time.perf_counter()
+    if solve_sudoku(grid):
+        print("Sudoku solved successfully!")
+        print_grid()
+        print(count)
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Time taken: {elapsed_time:.6f} seconds")
+        check_validty()
+    else:
+        print("No solution exists!")
+else:
+    exit()

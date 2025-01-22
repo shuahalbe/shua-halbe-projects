@@ -1,0 +1,114 @@
+import random
+import os
+while True:
+    size = input('would you like easy medium or hard')
+    if size == 'easy':
+        size = 6
+        number_of_mines = 9
+    elif size == 'medium':
+        size = 8
+        number_of_mines = 16
+    elif size == 'hard':
+        size = 10
+        number_of_mines = 25
+    else:
+        print('please write easy medium or hard')
+        continue
+    break
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+visited = []
+mines = []
+flags = []
+def create_grid():
+    global grid 
+    grid = [['.' for row in range(size)]for col in range (size)]
+    for i in range (number_of_mines):
+        check = 'no'
+        while check == 'no':
+            mines_x = random.randint(0,size)
+            mines_y = random.randint(0,size)
+            mine_location = mines_x , mines_y
+            if mine_location not in mines:
+                mines.insert(0, mine_location)
+                check = 'yes'
+    print('in order to win please flag all mines in the grid')
+
+def print_grid():
+    clear_screen()
+    result = '\n'.join('  '.join(row)for row in grid)
+    print(result)
+
+
+def game():
+    while True:
+        choice = input('1: pick square \n2: flag square or unflag \n3: exit')
+        if choice not in ['1' , '2' , '3']:
+            print('please choose 1, 2 or 3')
+            continue
+        if choice == '3':
+            sure = input('are you sure you want to exit (yes to exit)')
+            if sure == 'yes':
+                exit()
+            continue
+        try:
+            action_x = int(input('please enter row co-ordinate'))
+            action_y = int(input('please enter column co-ordinate'))
+        except ValueError:
+            print('please only enter a number')
+            continue
+        action_x -= 1
+        action_y -= 1
+        action = action_x , action_y
+        if 0 <= action_x < size and 0 <= action_y < size:
+            if choice == '1':
+                    check_value(action_x , action_y)
+                    print_grid()
+            elif choice == '2':
+                
+                if grid[action_x][action_y] == 'F':
+                    grid[action_x][action_y] = '.'
+                elif grid[action_x][action_y] == '.':
+                    grid[action_x][action_y] = 'F'
+                    flags.insert(0,action)
+                
+                print_grid()
+        else:
+            print('please enter a value within the grid co-ordinates')
+            continue
+
+        if set(flags) == set(mines):
+            print('well done you win')
+            exit()
+
+def check_value(action_x , action_y):
+    if (action_x , action_y) in visited:
+        return
+    visited.append((action_x, action_y))
+    if (action_x, action_y) in mines:
+        grid[action_x][action_y] = 'M '
+        print_grid()
+        print('game over')
+        exit()
+
+    count = 0
+    surrounding = []
+    for i in range(-1,2):
+        for j in range(-1,2):
+            check_x , check_y = action_x+i , action_y+j
+            if 0 <= check_x < size and 0 <= check_y < size:
+                surrounding.append((check_x, check_y))
+                if (check_x , check_y) in mines:
+                    count += 1
+    grid[action_x][action_y] = str(count)
+        
+    if count == 0:
+        for check_x , check_y in surrounding:
+            if (check_x , check_y) not in visited:
+                check_value(check_x, check_y)
+        
+create_grid()
+print_grid()
+game()
+        

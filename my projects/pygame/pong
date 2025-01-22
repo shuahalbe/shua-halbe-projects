@@ -1,0 +1,93 @@
+import pygame
+import random
+import time
+
+pygame.init()
+
+screen = pygame.display.set_mode((800,600))
+pygame.display.set_caption("pong")
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+BLUE = (0,0,255)
+clock = pygame.time.Clock()
+font = pygame.font.Font(None, 20)
+player_1_score = 0
+player_2_score = 0
+
+def print_score():
+    text_1 = str(player_1_score)
+    text_2 = str(player_2_score)
+    text_surface_1 = font.render(text_1, True, BLUE)
+    screen.blit(text_surface_1, (50, 50))
+    text_surface_2 = font.render(text_2, True, BLUE)
+    screen.blit(text_surface_2, (750, 50))
+running = True
+while running:
+    speed=0
+    paddle_1_loc = (40,300)
+    paddle_2_loc = (750,300)
+    ball_loc = (400,300)
+    while True:
+        move_x = random.randint(-1,1) 
+        move_y = random.randint(-1,1)
+        if move_x !=0 and move_y != 0:
+            break
+    direction = (move_x,move_y)
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_w]:
+            x , y = paddle_1_loc
+            if 0<y-3:
+                y-=3
+                paddle_1_loc = (x,y)            
+        if keys[pygame.K_s]:
+            x , y = paddle_1_loc
+            if y+3 < 560:
+                y+=3
+                paddle_1_loc = (x,y)
+        if keys[pygame.K_UP]:
+            a , b = paddle_2_loc
+            if 0<b-3:
+                b-=3
+                paddle_2_loc = (a,b)
+        if keys[pygame.K_DOWN]:
+            a , b = paddle_2_loc
+            if b+3<560:
+                b+=3
+                paddle_2_loc = (a,b)
+
+        x,y = paddle_1_loc
+        a,b = paddle_2_loc
+        screen.fill(WHITE)
+        pygame.draw.circle(screen,BLACK,(ball_loc),10)
+        pygame.draw.rect(screen,BLACK,(x,y,10,50))
+        pygame.draw.rect(screen,BLACK,(a,b,10,50))
+        ball_x , ball_y = ball_loc
+        ball_move_x , ball_move_y = direction
+        if ball_x < 10:
+            player_2_score +=1
+            time.sleep(1)
+            break
+        if 790< ball_x:
+            player_1_score +=1
+            time.sleep(1)
+            break
+        if ball_y <10 or 590<ball_y:
+            ball_move_y = -ball_move_y
+        if y <(ball_y) < y+50 and ball_x-10 == 50:
+            ball_move_x = -ball_move_x
+            if speed<100:
+                speed+=5
+        if b <(ball_y) < b+50 and ball_x+10 == 750:
+            ball_move_x = -ball_move_x
+            if speed<100:
+                speed+=5
+        
+        ball_loc = (ball_x -ball_move_x) , (ball_y - ball_move_y)
+        direction = ball_move_x,ball_move_y
+        print_score()
+        pygame.display.flip()
+        clock.tick(60+speed)

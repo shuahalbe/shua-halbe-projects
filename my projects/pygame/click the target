@@ -1,0 +1,40 @@
+import pygame
+import random
+
+pygame.init()
+screen = pygame.display.set_mode((800,600))
+pygame.display.set_caption("click the target")
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+clock = pygame.time.Clock()
+font = pygame.font.Font(None, 36)
+
+
+score = 0
+text = str(score)
+location = random.randint(50,750), random.randint(50,550)
+
+
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            pygame.display.set_caption("aaahahahahh")
+            x,y = event.pos
+            a,b = location
+            close = (x+y) - (a+b)
+            if -50<=close<=50:
+                score +=1
+                text = str(score)
+                location = random.randint(50,750), random.randint(50,550)
+
+    screen.fill(WHITE)
+    
+    pygame.draw.circle(screen,BLACK,(location),50)
+    text_surface = font.render(text, True, BLACK)
+    screen.blit(text_surface, (100, 100))
+    pygame.display.flip()
+    clock.tick(60)

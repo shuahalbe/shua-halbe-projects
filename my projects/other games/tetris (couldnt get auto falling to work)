@@ -1,0 +1,145 @@
+import random
+import os
+import time
+
+grid = [['.' for row in range(10)]for col in range(20)]
+
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def print_grid():
+    clear_screen()
+    result = '\n'.join('  '.join(row)for row in grid)
+    print(result)
+
+def blocks():
+    global chosen_block , piece
+    starting_pos = random.randint(2,8)
+    all_blocks =[
+        [(0,starting_pos) ,(1,starting_pos),(2,starting_pos),(3,starting_pos)], # I
+        [(0,starting_pos), (1,starting_pos),(0,starting_pos+1),(1,starting_pos+1)], #O
+        [(0,starting_pos),(0,starting_pos-1),(0,starting_pos+1),(1,starting_pos)], #T
+        [(0,starting_pos),(1,starting_pos),(0,starting_pos - 1), (1,starting_pos+1)], #Z
+        [(0,starting_pos),(1,starting_pos),(0,starting_pos + 1), (1,starting_pos-1)], #S
+        [(0,starting_pos),(1,starting_pos),(2,starting_pos),(2,starting_pos - 1)], #J
+        [(0,starting_pos),(1,starting_pos),(2,starting_pos),(2,starting_pos + 1)], #L
+    ]
+
+    piece = random.randint(0,6)
+    chosen_block = all_blocks[piece]
+    print_blocks() 
+
+def print_blocks():
+    global chosen_block
+    while True:
+        for r,c in chosen_block:
+            grid[r][c] = 'X'
+        print_grid()
+        for r,c in chosen_block:
+            grid[r][c] = '.'
+        movement()
+        for r ,c in chosen_block:
+            grid[r][c] = 'X'
+        print_grid()
+        for r,c in chosen_block:
+            grid[r][c] = '.'
+        new_pos = []
+        for r,c in chosen_block:
+            if r+1 < 20 and grid[r+1][c] == '.':
+                new_pos.append((r+1,c))
+            else:              
+                for r,c in chosen_block:
+                    grid[r][c] = 'X'
+                return
+        chosen_block = []
+        for r,c in new_pos:
+            chosen_block.append((r,c))
+
+def movement():
+    global chosen_block
+    for r,c in chosen_block:
+        if r+1 < 20 and grid[r+1][c] == '.':
+            pass
+        else:
+            return
+    action = input('a,d,r to move')
+    if action == 'a':
+        pos = []
+        for r,c in chosen_block:
+            if 0<=c-1 < 10 and grid[r][c-1] == '.':
+                pos.append((r,c-1))
+            else:
+                return
+        chosen_block = []
+        for r , c in pos:
+            chosen_block.append((r,c))
+
+    elif action == 'd':
+        pos = []
+        for r,c in chosen_block:
+            if 0<=c+1 < 10 and grid[r][c+1] == '.':
+                pos.append((r,c+1))
+            else:
+                return
+        chosen_block = []
+        for r , c in pos:
+            chosen_block.append((r,c))
+    elif action == 'r':
+        rotate()
+
+def rotate ():
+    global piece ,chosen_block
+    if piece == 0: #I
+        r,c = chosen_block[1]
+        x,y = chosen_block[2]
+        if c == y:
+            mid_row = (r+x)/2
+            mid_col = c+0.5
+        else:
+            mid_row = r+0.5
+            mid_col = (c+y)/2
+
+    elif piece == 1: # O
+        return
+    elif piece == 2:
+        mid_row ,mid_col = chosen_block[0] # T
+    elif piece == 3 or piece == 4:
+        mid_row , mid_col = chosen_block[1] #S and Z
+    elif piece == 5 or piece == 6:
+        mid_row , mid_col = chosen_block[1]
+    
+    pos = []
+    for r,c in chosen_block:
+        new_x = mid_row + (c - mid_col)
+        new_y = mid_col - (r - mid_row)
+        if 0<= round(new_x) <20 and 0<= round(new_y) < 10 and grid[round(new_x)][round(new_y)] == '.':
+            pos.append((round(new_x), round(new_y)))
+        else:
+            return
+    chosen_block = []
+    for r ,c in pos:
+        chosen_block.append((r,c))
+
+
+def check():
+    for row in range(19,-1,-1,):
+        count = 0
+        for col in range(10):
+            if grid[row][col] == 'X':
+                count +=1
+        if count == 10:
+            for col in range(10):
+                grid[row][col] = '.'
+            for i in range(row-1 , -1,-1):
+                for col in range(10):
+                    if grid[i][col] == 'X':
+                        grid[i][col] = '.'
+                        grid[i+1][col] = 'X'
+    for col in range(10):
+        if grid[0][col] == 'X':
+            print('you lose, game over')
+            exit()
+
+while True:
+    blocks()
+    check()

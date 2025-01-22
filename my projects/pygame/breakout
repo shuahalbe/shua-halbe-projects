@@ -1,0 +1,140 @@
+import pygame
+import random
+import time
+
+pygame.init()
+screen = pygame.display.set_mode((800,600))
+pygame.display.set_caption("pong")
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+BLUE = (0,0,255)
+RED = (255,0,0) 
+clock = pygame.time.Clock()
+font = pygame.font.Font(None, 100)
+speed = 0
+lives = 5
+
+bar_x,bar_y = 375,580
+bar_loc = bar_x,bar_y
+def bar():
+    bar_x,bar_y = bar_loc
+    pygame.draw.rect(screen,BLACK,(bar_x,bar_y,50,10))
+def blocks():
+    global all_blocks
+    all_blocks = []
+    for i in range(6):
+        for j in range(20):
+            decision = random.randint(0,1)
+            if decision == 1:
+                all_blocks.append((i,j))
+
+def draw_blocks():
+    global all_blocks
+    for r,c in all_blocks:
+        pygame.draw.rect(screen,RED,((c*40),(50+(r*10)),40,10))
+
+def ball_direction():
+    global ball_move_x, ball_move_y,direction
+    while True:
+        ball_move_x = random.randint(-1,1)
+        ball_move_y = random.randint(0,1)
+        if ball_move_x!=0 and ball_move_y!=0:
+            direction = (ball_move_x,ball_move_y)
+            break
+    
+
+ball_x, ball_y = 400 ,300
+ball_loc = ball_x,ball_y   
+def ball():
+    global ball_loc  
+    pygame.draw.circle(screen,BLUE,(ball_loc), 10)
+def ball_movement():
+    global direction,ball_loc
+    ball_x,ball_y = ball_loc
+    ball_move_x,ball_move_y = direction
+    ball_x = ball_x + ball_move_x
+    ball_y = ball_y + ball_move_y
+    ball_loc = ball_x,ball_y
+    direction = ball_move_x,ball_move_y
+
+
+def collisions():
+    def wall_collision():
+        global direction,ball_loc,running,lives
+        ball_x,ball_y = ball_loc
+        ball_move_x,ball_move_y = direction
+        if ball_y>590:
+            ball_x, ball_y = 400 ,300
+            ball_loc = ball_x,ball_y 
+            ball_direction()
+            lives -=1
+            if lives == 0:
+                running = False
+        if 790<ball_x or ball_x<10:
+            ball_move_x = -ball_move_x
+        if ball_y < 10:
+            ball_move_y = -ball_move_y
+        ball_loc = ball_x,ball_y
+        direction = ball_move_x,ball_move_y
+    def bar_collision():
+        global direction,ball_loc , bar_loc
+        bar_x ,bar_y = bar_loc
+        ball_x,ball_y = ball_loc
+        ball_move_x,ball_move_y = direction
+        if 569<ball_y <571 and bar_x < ball_x < bar_x +50:
+            ball_move_y = -ball_move_y
+        ball_loc = ball_x,ball_y
+        direction = ball_move_x,ball_move_y
+
+    def block_collision():
+        global ball_loc , direction , all_blocks,speed,running
+        ball_x,ball_y = ball_loc
+        ball_move_x,ball_move_y = direction
+        for r,c in all_blocks:
+            if ball_y == 60+(r*10) and c*40<ball_x < 40+(c*40):
+                ball_move_y = -ball_move_y
+                all_blocks.remove((r,c))
+                if len(all_blocks) == 0:
+                    while running:
+                        for event in pygame.event.get():
+                            if event.type == pygame.QUIT:
+                                running = False
+                        screen.fill(WHITE)
+                        text = ('well done, you win')
+                        text_surface = font.render(text, True, BLUE)
+                        screen.blit(text_surface, (400, 300))
+                speed +=2
+        ball_loc = ball_x,ball_y
+        direction = ball_move_x,ball_move_y
+            
+    wall_collision()
+    bar_collision()
+    block_collision()
+            
+running = True
+while running:
+    blocks()
+    ball_direction()
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            x,y = bar_loc
+            if 0< x-5:
+                x-=3
+            bar_loc = x,y
+        if keys[pygame.K_RIGHT]:
+            x,y = bar_loc
+            if x+5<750:
+                x+=3
+            bar_loc = x,y
+        screen.fill(WHITE)
+        bar()
+        ball()
+        draw_blocks()
+        ball_movement()
+        collisions()
+        pygame.display.flip()
+        clock.tick(100+speed)

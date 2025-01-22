@@ -1,0 +1,41 @@
+import pygame
+import random
+
+pygame.init()
+
+screen = pygame.display.set_mode((800,600))
+pygame.display.set_caption("bouncing ball")
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+clock = pygame.time.Clock()
+place = (400,300)
+direction = (1,1)
+speed = 60
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:  
+            if event.key == pygame.K_UP:  
+                speed += 5
+            elif event.key == pygame.K_DOWN: 
+                if 0 < speed -5:
+                    speed -=5
+
+    a,b = direction
+    x,y = place
+    if 50<=x+a<=750 and 50<= y+b <=550:
+        place = (x+a, y+b)
+    if y+b < 50 or 550 < y+b:
+        direction = (a,-b)
+    if x+a < 50 or 750 < x+a:
+        direction = (-a,b)
+
+    screen.fill(WHITE)
+    pygame.draw.circle(screen , BLACK ,place, 50)
+    pygame.display.flip()
+    clock.tick(speed)
+
+pygame.quit()

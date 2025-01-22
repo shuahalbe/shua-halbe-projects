@@ -1,0 +1,83 @@
+size = int(input('what size grid do you want'))   
+
+def create_grid(size):
+    global grid
+    grid = [['.' for _ in range(size)] for _ in range(size)]
+
+def print_grid():
+    row_dividers = ('\n' + size * '--- ' + '\n')
+    result = row_dividers.join(' | '.join(map(str, row)) for row in grid)
+    print(result)
+
+
+    
+def rules(row , col):
+    #check for other queen on same row
+    for i in range (size):
+        if grid[row][i] == 'Q':
+            return False
+    
+    #check columns
+    for i in range (size):
+        if grid[i][col] == 'Q':
+            return False
+    
+    #check diagonals in each direction
+    for i in range (size):
+        if row-i < 0:
+            break
+        elif col-i < 0:
+            break
+        elif grid[row-i][col-i] == 'Q':
+            return False
+    for i in range (size):
+        if row+i > size-1:
+            break
+        elif col+i > size-1:
+            break
+        elif grid[row+i][col+i] == 'Q':
+            return False
+    
+    for i in range (size):
+        if row+i > size-1:
+            break
+        elif col-i < 0 :
+            break
+        elif grid[row+i][col-i] == 'Q':
+            return False
+    for i in range (size):
+        if row-i < 0:
+            break
+        elif col+i > size-1:
+            break
+        elif grid[row-i][col+i] == 'Q':
+            return False
+        
+    return True
+
+def solve_n_queens(row=0):
+    if row == size:
+        return True
+    for col in range(size):
+        if rules(row , col):
+            grid[row][col] = 'Q'
+
+            if solve_n_queens(row + 1):  # Recur to place the next queen
+                return True
+
+            grid[row][col] = '.'
+    return False
+
+
+
+
+create_grid(size)
+solve_n_queens()
+print_grid()
+
+
+
+
+
+
+

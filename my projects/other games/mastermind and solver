@@ -1,0 +1,160 @@
+import random
+import time
+import os
+
+grid_code = [['.' for row in range(4)]for col in range(10)]
+grid_check = [['.' for row in range(4)]for col in range(10)]
+
+def print_grid():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    for row1, row2 in zip(grid_code, grid_check):
+        print(" ".join(map(str, row1)), "   ", " ".join(map(str, row2)))
+
+def create_code(level, doubles):
+    code = []
+    for i in range(4):
+        if doubles == '2':
+            while True:
+                number = random.randint(1,level)
+                if number not in code:
+                    code.append(number)
+                    break
+        else:
+            number = random.randint(1,level)
+            code.append(number)
+    return code
+
+num_guess = 0
+def check_guess(guess,code):
+    global num_guess
+    if len(str(guess)) == 4:
+        digits = [int(digit) for digit in str(guess)]
+        for i in range(4):
+            grid_code[9-num_guess][i] = digits[i]
+        for i in range(4):
+            if digits[i] == code[i]:
+                grid_check[9-num_guess][i] = 'C'
+            elif digits[i] in code:
+                grid_check[9-num_guess][i] = 'H'
+            else:
+                grid_check[9-num_guess][i] = 'X'
+
+        num_guess +=1
+    else:
+        print('please only enter a 4 digit number')
+        time.sleep(2)
+def win():
+    count = 0
+    for i in range(4):
+        if grid_check[10-num_guess][i] == 'C':
+            count+=1
+    if count == 4:
+        print('you win')
+        return True
+    return False
+
+def play():
+    while True:
+        while True:
+            choice = input('1: play\n2:make the code')
+            if choice == '1' or choice == '2':
+                break
+            else:
+                print('please only write 1 or 2')
+        if choice == '1':     
+            hardness = input('1:easy\n2:medium\n3:hard')
+            if hardness == '1':
+                level = 4
+            elif hardness == '2':
+                level = 6
+            elif hardness == '3':
+                level = 8
+            else:
+                print('please only enter 1,2 or 3')
+                continue
+            doubles = input('1:doubles\n2:no doubles')
+            if doubles != '1' and doubles != '2':
+                continue
+        break
+    if choice == '2':
+        try:
+            while True:
+                level = int(input('enter a number 1-9 of how many numbers should be included'))
+                if 0<level <10:
+                    break
+                else:
+                    print('please only enter a number 1-9')
+        except ValueError:
+            print('please only enter a number')
+        pos_num =[]
+        for i in range(level):
+            pos_num.append(i+1)
+        while True:
+            chosen_code = input('enter your 4 digit code')
+            count =0
+            if len(chosen_code) == 4:
+                for digit in str(chosen_code):
+                    if int(digit) in pos_num:
+                        count +=1
+                if count == 4:
+                    break
+        code = []
+        for digit in str(chosen_code):
+            code.append(int(digit))
+        solver_setup(level)
+        while True:
+            code_guess = all_pos[random.randint(0,(len(all_pos)-1))]
+            guess = ''.join(map(str, code_guess))
+            check_guess(guess,code)
+            solve(code_guess)
+            print_grid()
+            time.sleep(1)
+            if win():
+                (print('your code was ' +guess))
+                break
+    elif choice == '1':
+        code = create_code(level,doubles)
+        print_grid()
+        while True:
+            guess = int(input('enter your 4 digit code'))
+            check_guess(guess,code)
+            print_grid()
+            if win():
+                break
+
+
+def solver_setup(level):
+    global all_pos
+    all_pos = []
+    for a in range(level):
+        for b in range(level):
+            for c in range(level):
+                for d in range(level):
+                    all_pos.append((a+1,b+1,c+1,d+1))
+def solve(code_guess): 
+    global all_pos ,num_guess
+    removed_codes = []
+    for i in range(4):
+        if grid_check[10-num_guess][i] == 'X':
+            for a,b,c,d in all_pos:
+                if code_guess[i] in [a,b,c,d]:
+                    removed_codes.append((a,b,c,d))
+        elif grid_check[10-num_guess][i] == 'C':
+            for a,b,c,d in all_pos:
+                list_code = [a,b,c,d]
+                if list_code[i] != code_guess[i]:
+                    removed_codes.append((a,b,c,d))
+        elif grid_check[10-num_guess][i] == 'H':
+            for a,b,c,d in all_pos:
+                if code_guess[i] not in [a,b,c,d]:
+                    removed_codes.append((a,b,c,d))
+                list_code = [a,b,c,d]
+                if code_guess[i] == list_code[i]:
+                    removed_codes.append((a,b,c,d))
+
+    for a,b,c,d in removed_codes:
+        if (a,b,c,d) in all_pos:
+            all_pos.remove((a,b,c,d))
+
+
+play()

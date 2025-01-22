@@ -1,0 +1,72 @@
+import time
+import os
+size = int(input('enter grid size'))
+
+grid = [['.' for row in range(size)] for col in range(size)]
+
+def print_grid():
+    global grid
+    os.system('cls' if os.name == 'nt' else 'clear')
+    result = '\n'.join(' '.join(row)for row in grid)
+    print(result)
+
+def starting_pos():
+    global grid
+    action = 0
+    while action != 3:
+        print_grid()
+        action = int(input('1: add a cell\n2: remove a cell\n3: done'))
+        pos = set([1,2,3])
+        if action in pos:
+            if action == 1:
+                row = int(input('enter row number'))
+                col = int(input('enter col number'))
+                row , col = row-1, col-1
+                if 0<= row<size and 0<= col<size:
+                    grid[row][col] = 'X'
+                else:
+                    print('please enter a valid row and column')
+                    continue
+            elif action == 2:
+                row = int(input('enter row number'))
+                col = int(input('enter col number'))
+                row , col = row-1, col-1
+                if 0<= row<size and 0<= col<size:
+                    if grid[row][col] == 'X':
+                        grid[row][col] = '.'
+                else:
+                    print('please enter a valid row and column')
+                    continue
+            else:
+                print('cell already empty')
+        else:
+            print('please pick 1,2,3')
+
+def rules():
+    global grid
+    new_cells = []
+    num_cells = 0
+    for rows in range(size):
+        for cols in range(size):
+            count = 0
+            for i in range(rows-1,rows+2,1):
+                for j in range(cols-1,cols+2,1):
+                    if 0<=i<size and 0<=j<size and grid[i][j] == 'X':
+                        count +=1
+            if grid[rows][cols] == 'X' and 3<=count<5:
+                new_cells.append((rows,cols))
+                num_cells+=1
+            elif grid[rows][cols] == '.' and count == 3:
+                new_cells.append((rows,cols))
+                num_cells+=1
+    grid = [['.' for row in range(size)] for col in range(size)]
+    for r,c in new_cells:
+        grid[r][c] = 'X'
+    print_grid()
+    if num_cells == 0:
+        exit()
+
+starting_pos()                
+while True:
+    rules()
+    time.sleep(0.3)

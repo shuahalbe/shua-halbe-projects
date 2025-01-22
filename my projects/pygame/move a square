@@ -1,0 +1,47 @@
+import pygame
+
+pygame.init()
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH,HEIGHT))
+pygame.display.set_caption("move a square")
+
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+place = (375,275,50,50)
+clock = pygame.time.Clock()
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:  
+            if event.key == pygame.K_LEFT:
+                a,b,c,d = place
+                a -=10
+                if 0<=a-10 <=800:
+                    place = (a,b,c,d)
+            elif event.key == pygame.K_RIGHT:
+                a,b,c,d = place
+                a +=10
+                if 0<= a+10 <=750:
+                    place = (a,b,c,d)
+            elif event.key == pygame.K_UP:
+                a,b,c,d = place
+                b-=10
+                if 0<=b-10 <=600:
+                    place = (a,b,c,d)
+
+            elif event.key == pygame.K_DOWN:
+                a,b,c,d = place
+                b+=10
+                if 0<=b+10 <=550:
+                    place = (a,b,c,d)
+
+        screen.fill(WHITE)
+        pygame.draw.rect(screen , BLACK,(place))
+        pygame.display.flip()
+        clock.tick(60)
+
+
+pygame.quit()
