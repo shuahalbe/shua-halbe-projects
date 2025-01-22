@@ -3,6 +3,8 @@ import time
 import os
 import string
 
+#still missing lots of features such as promotion, will be added at a later date
+
 grid = [[' ' for row in range(9)]for col in range(9)]
 black_pieces = set(['♜','♞','♟','♚','♛','♝'])
 white_pieces = set(['♖','♘','♙','♔','♕','♗'])
