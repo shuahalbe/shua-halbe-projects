@@ -1,0 +1,289 @@
+import random
+import time
+import os
+
+grid = [['   'for col in range(14)]for row in range(13)]
+white_piece = "⚪ "
+black_piece = "⚫ "
+WHITE_BG = "\033[48;2;240;240;220m" 
+BROWN_BG = "\033[48;2;140;100;80m"  
+RED_BG = "\033[41m"
+RESET = "\033[0m" 
+
+def print_grid():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print('W_J is white jail, B_J is black jail, W_W is amount of white pieces removed, B_W is amount of black pieces removed')
+    print('the black pieces move from the bottom to top row and white pieces move from top to bottom in the way the arrows show')
+    print('enter just u or l for lower and upper and then a number written on the bottom row to choose your piece')
+    for i in range(13):
+        for j in range(14):
+            if i == 12:
+                print(f"{RED_BG}{grid[i][j]}{RESET}", end="")
+            elif j == 0 or j== 13:
+                print(f"{RED_BG}{grid[i][j]}{RESET}", end="")
+            elif ((j)%2 != 0 and i<6) or  (j%2 ==0 and 6<=i<14):
+                print(f"{BROWN_BG}{grid[i][j]}{RESET}", end="")
+            else:
+                print(f"{WHITE_BG}{ grid[i][j]}{RESET}", end="")
+        print()
+
+def start_layout():
+    grid[3][0],grid[8][0],grid[4][0],grid[7][0],grid[6][0],grid[5][0] = ' U ',' L ','-->','-->','|  ','|  '
+    grid[1][0],grid[1][13],grid[10][0],grid[10][13] =' 0 ',' 0 ',' 0 ',' 0 '
+    grid[0][0],grid[11][0],grid[0][13],grid[11][13] = 'B_J','W_J' ,'B_W','W_W'
+    for i in range(12):
+        grid[5][i+1] = ' 0 '
+        grid[6][i+1] = ' 0 '
+    for i in range(12):
+        if i+1<10:
+            grid[12][i+1] = ' ' + str(i+1) + ' '
+        elif i+1>9:
+            grid[12][i+1] = ' ' +str(i+1)
+    for i in range(5):
+        grid[11-i][7] = white_piece
+        grid[i][1] = white_piece
+        grid[i][7] = black_piece
+        grid[11-i][1] = black_piece    
+    for i in range(3):
+        grid[i][5] = black_piece
+        grid[11-i][5] = white_piece
+    for i in range(2):
+        grid[i][12] = white_piece
+        grid[11-i][12] = black_piece
+
+
+def dice_roll():
+    global go_left
+    roll_1 = random.randint(1,6)
+    roll_2 = random.randint(1,6)
+    if roll_1 != roll_2:
+        go_left =[roll_1,roll_2]
+    else:
+        go_left = [roll_1,roll_1,roll_2,roll_2]
+
+turn = random.randint(1,2)
+if turn == 1:
+    turn = white_piece
+else:
+    turn = black_piece
+
+def move():
+    global go_left,turn
+    while True:
+        if turn == white_piece:
+            turn = black_piece
+            player = 'black'
+        else:
+            turn = white_piece
+            player = 'white'
+        dice_roll()
+        while len(go_left)!=0:
+            print_grid()
+            print(go_left)
+            if (turn == black_piece and not is_captured_black()) or (turn == white_piece and not is_captured_white()) :
+                while True:
+                    if (turn == white_piece and white_remove()) or (turn == black_piece and black_remove()):
+                        piece = input(player +' please enter u or l for lower or upper and a number for column for piece to remove or move')
+                    elif (turn == white_piece and not white_remove()) or (turn == black_piece and not black_remove()):
+                        piece = input(player +' please enter u or l for lower or upper and a number for column')
+                    col = 0
+                    for letter in piece:
+                        if letter == 'u':
+                            row = 0
+                        elif letter == 'l':
+                            row = 11
+                        else:
+                            try:
+                                col = col*10 + int(letter)
+                            except ValueError:
+                                print('please enter just u or l and a number')
+                                continue
+                    try:
+                        if grid[row][col] == turn:
+                            break
+                        else:
+                            print('please enter one of your own pieces')
+                            continue
+                    except (UnboundLocalError, IndexError):
+                        print('enter just u or l and a number')
+                        continue
+                try:
+                    distance = int(input('how far should your piece go'))
+                except ValueError:
+                    continue
+                if distance in go_left:
+                    if legal(row,col,turn,distance):
+                        go_left.remove(distance)
+                    else:
+                        print('please enter valid distance')
+                        time.sleep(2)
+                        continue
+            elif (turn == black_piece and is_captured_black()) or (turn == white_piece and is_captured_white()):            
+                print('piece in jail')
+                distance = input('enter distance to move jailed piece or skip to skip')
+                if distance == 'skip':
+                    go_left = []
+                    continue
+                else:
+                    try:
+                        distance = int(distance)
+                    except ValueError:
+                        continue
+                if distance not in go_left:
+                    continue
+                if turn == black_piece:
+                    row = 11
+                else:
+                    row = 0
+                col = 13
+                if legal(row,col,turn,distance):
+                    go_left.remove(distance)
+                    if turn == white_piece:
+                        for letter in grid[10][0]:
+                            try:
+                                grid[10][0] = ' '+str(int(letter)-1)+' '
+                            except ValueError:
+                                pass
+                    elif turn == black_piece:
+                        for letter in grid[1][0]:
+                            try:
+                                grid[1][0] = ' '+str(int(letter)-1)+' '
+                            except ValueError:
+                                pass
+                else:
+                    print('illegal move')
+
+def legal(row,col,turn,distance):
+    position = False
+    remove_piece = False
+    if (row == 11 and turn == black_piece) or (row == 0 and turn == white_piece):
+        if 0<col-distance:
+            new_col = col-distance
+            new_row = row
+            position = True
+        elif col-distance < 1:
+            if row ==0:
+                new_row = 11
+            else:
+                new_row = 0
+            new_col = abs(col - distance)+1
+            position = True
+    elif (row == 11 and turn == white_piece) or (row == 0 and turn == black_piece):
+        if col+distance<=12:
+            new_col = col+distance
+            new_row = row
+            position = True
+        elif (turn == white_piece and white_remove()) or (turn == black_piece and black_remove()):
+            remove_piece = True
+            new_row = row
+            new_col = col
+
+
+
+    if position or remove_piece:
+        top_letter = False
+        if grid[new_row][new_col] == turn or (grid[new_row][new_col]!= turn and grid[abs(new_row-1)][new_col] == '   ') or remove_piece:
+            if col!=13:
+                for letter in grid[abs(row-5)][col]:
+                    try:
+                        if int(letter) !=0:
+                            grid[abs(row-5)][col] = ' '+str(int(letter)-1)+' '
+                            top_letter = True
+                    except ValueError:
+                        pass
+                if not top_letter:
+                    for i in range(5):
+                        if row ==11:
+                            if grid[7+i][col] == turn:
+                                grid[7+i][col] = '   '
+                                break
+                        elif row ==0:
+                            if grid[4-i][col] == turn:
+                                grid[4-i][col] = '   '
+                                break
+            if not remove_piece:
+                if (turn == black_piece and grid[new_row][new_col] == white_piece) or (turn == white_piece and grid[new_row][new_col] == black_piece):
+                    grid[new_row][new_col] = '   '
+                    if turn == black_piece:
+                        for letter in grid[10][0]:
+                            try:
+                                grid[10][0] = ' '+str(int(letter)+1)+' '
+                            except ValueError:
+                                pass
+                    elif turn == white_piece:
+                        for letter in grid[1][0]:
+                            try:
+                                grid[1][0] = ' '+str(int(letter)+1)+' '
+                            except ValueError:
+                                pass
+                if grid[abs(new_row-4)][new_col] == turn:
+                    for letter in grid[abs(new_row-5)][new_col]:
+                        try:
+                            grid[abs(new_row-5)][new_col] = ' '+str(int(letter)+1)+' '
+                            return True
+                        except ValueError:
+                            pass
+                else:
+                    for i in range(5):
+                        if new_row ==0:
+                            if grid[new_row+i][new_col] == '   ':
+                                grid[new_row+i][new_col] = turn
+                                return True
+                        elif new_row ==11:
+                            if grid[new_row-i][new_col] == '   ':
+                                grid[new_row-i][new_col] = turn
+                                return True
+            else:
+                if turn == black_piece:
+                    num = grid[1][13]
+                    num = int(num)+1
+                    grid[1][13] = ' '+str(num)+' '
+                    if grid[1][13] == ' 15 ':
+                        print('well done black you win')
+                        print_grid()
+                        exit()                      
+                elif turn == white_piece:
+                    num = grid[10][13]
+                    num = int(num)+1
+                    grid[10][13] = ' '+str(num)+' '
+                    if grid[10][13] == ' 15 ':
+                        print('well done white you win')  
+                        print_grid()
+                        exit()    
+                return True          
+    return False
+
+def is_captured_black():
+    for letter in grid[1][0]:
+        try:
+            if int(letter)!=0:
+                return True
+        except ValueError:
+            pass
+    return False
+
+def is_captured_white():
+    for letter in grid[10][0]:
+        try:
+            if int(letter)!=0:
+                return True
+        except ValueError:
+            pass
+    return False
+
+def white_remove():
+    if all((grid[j][1+i]== '   ' or grid[j][1+i]== black_piece)for i in range(12) for j in range(5)):
+        if all((grid[11-j][i+1]== '   ' or grid[11-j][i+1]== black_piece)for i in range(6) for j in range(5)):
+            if grid[10][0] == ' 0 ':
+                return True
+    return False
+def black_remove():
+    if all((grid[11-j][i+1]== '   ' or grid[11-j][i+1]== white_piece)for i in range(12) for j in range(5)):
+        if all((grid[j][1+i]== '   ' or grid[j][1+i]== white_piece)for i in range(6) for j in range(5)):
+            if grid[1][0] == ' 0 ':
+                return True
+    return False
+
+start_layout()
+move()
+
