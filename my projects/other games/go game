@@ -1,0 +1,145 @@
+import os
+import time
+import string
+import copy
+
+white_piece = "⚪"
+black_piece = "⚫"
+grid_pieces = [" ┌", "─┐", " └", "─┘",'─┼'," ├", "─┤", "─┬", "─┴"]
+WHITE_BG = "\033[48;2;240;240;220m" 
+BROWN_BG = "\033[48;2;140;100;80m"  
+RED_BG = "\033[41m"
+RESET = "\033[0m" 
+
+def pick_size():
+    global length
+    while True:
+        try:
+            size = int(input('1: 9 * 9\n2: 11 * 11\n3: 13 * 13\n4: 19 * 19' ))
+            convert = {1:9,2:11,3:13,4:19}
+            if size in convert:
+                length = convert[size]
+                break
+        except ValueError:
+            print('please enter the number corresponding to size')
+
+def create_grid():
+    global length,grid,original
+    pick_size()
+    alphabet = list(string.ascii_lowercase)
+    grid = [['  'for col in range(length+2)]for row in range(length+2)]
+    for i in range(length):
+        if i<9:
+            grid[i+1][0] = ' '+str(i+1)
+        else:
+            grid[i+1][0] = i+1
+        grid[0][i+1] = ' '+alphabet[i]
+    for i in range(length-2):
+        for j in range(length-2):
+            grid[i+2][j+2] = '─┼'
+            grid[i+2][1],grid[length-i-1][length],grid[1][i+2],grid[length][length-i-1] = " ├", "─┤", "─┬", "─┴"
+    grid[1][1],grid[1][length],grid[length][1],grid[length][length]=" ┌", "─┐", " └", "─┘"
+    original = copy.deepcopy(grid)
+
+def print_grid():
+    global length,grid
+    os.system('cls' if os.name == 'nt' else 'clear')
+    for i in range(length+2):
+        for j in range(length+2):
+            if i == 0 or i == length+1:
+                print(f"{RED_BG}{grid[i][j]}{RESET}", end="")
+            elif j == 0 or j== length+1:
+                print(f"{RED_BG}{grid[i][j]}{RESET}", end="")
+            else:
+                print(f"{WHITE_BG}{ grid[i][j]}{RESET}", end="")
+        print()
+
+def choose_place(turn,player):
+    global length,grid
+    while True:
+        last_position = copy.deepcopy(grid)
+        alphabet = list(string.ascii_lowercase)
+        piece = input(player +' enter letter then number corresponding to your place')
+        row = 0
+        for letter in piece:
+            if letter in alphabet:
+                col = alphabet.index(letter)
+                col+=1
+            else:
+                try:
+                    row = row*10 + int(letter)
+                except ValueError:
+                    print('just enter letter and number')
+                    continue
+        try:
+            if grid[row][col] != white_piece and grid[row][col] != black_piece:
+                grid[row][col] = turn
+                if check_surrounded(turn):
+                    if last_position == grid:
+                        print('you cant repeat same position')
+                        continue
+                    else:
+                        break
+                else:
+                    print('you cant kill only your own piece')
+                    grid[row][col] = original[row][col]
+                    continue
+            else:
+                print('place already taken')
+                continue
+        except (IndexError,UnboundLocalError):
+            print('not legal place')
+            continue  
+
+def check_surrounded(turn):
+    global length,grid,original
+    deleted_groups = []
+    checked = []
+    for i in range(length+2):
+        for j in range(length+2):
+            if (grid[i][j] == white_piece or grid[i][j] == black_piece) and ((i,j) not in checked):
+                group = []
+                check_i = i
+                check_j = j
+                group.append((check_i,check_j))
+                find_group(check_i,check_j,group)
+                if not any(grid[r+a][c] in grid_pieces for a in (-1,1) for r,c in group) and \
+                    not any(grid[r][c+a] in grid_pieces for a in (-1,1) for r,c in group):
+                        for r,c in group:
+                            deleted_groups.append((r,c))
+                for r,c in group:
+                    checked.append((r,c))
+    if 0<len(deleted_groups):
+        if all(grid[r][c] == turn for r,c in deleted_groups):
+            return False
+        else:
+            for r,c in deleted_groups:
+                grid[r][c] = original[r][c]
+    return True
+        
+
+def find_group(check_i,check_j,group):
+    same = grid[check_i][check_j] 
+    for a in range(-1,2):
+        if grid[check_i+a][check_j] == same and (check_i+a,check_j) not in group:
+            group.append((check_i+a,check_j))
+            find_group(check_i=check_i+a,check_j=check_j,group=group)
+        if grid[check_i][check_j+a] == same and (check_i,check_j+a) not in group:
+            group.append((check_i,check_j+a))
+            find_group(check_i=check_i,check_j=check_j+a,group=group)
+    
+
+create_grid()
+print_grid()
+
+turn = white_piece
+player = 'white'
+while True:
+    choose_place(turn,player)
+    print_grid()
+    if turn == white_piece:
+        turn = black_piece
+        player = 'black'
+    else:
+        turn = white_piece
+        player = 'white'
