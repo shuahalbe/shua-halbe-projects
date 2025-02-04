@@ -1,310 +1,287 @@
-import random
-import time
 import os
 import string
 
-#still missing lots of features such as promotion, will be added at a later date
+WHITE_BG = "\033[48;2;240;240;220m" 
+BLACK_BG = "\033[48;2;120;100;80m"  
+RESET = "\033[0m" 
+WHITE_TEXT = "\033[38;2;255;255;255m"  
+BLACK_TEXT = "\033[38;2;0;0;0m"
+RED_BG = "\033[41m"
 
-grid = [[' ' for row in range(9)]for col in range(9)]
-black_pieces = set(['♜','♞','♟','♚','♛','♝'])
-white_pieces = set(['♖','♘','♙','♔','♕','♗'])
-b_r,b_h,b_p,b_k,b_q,b_b = '♜','♞','♟','♚','♛','♝'
-w_r,w_h,w_p,w_k,w_q,w_b = '♖','♘','♙','♔','♕','♗'
+grid = [['  ' for col in range(10)]for row in range(10)]
+all_pieces = set(['♜ ','♞ ','♟ ','♚ ','♛ ','♝ ','♖ ','♘ ','♙ ','♔ ','♕ ','♗ '])
+black_pieces = set(['♜ ','♞ ','♟ ','♚ ','♛ ','♝ '])
+white_pieces = set(['♖ ','♘ ','♙ ','♔ ','♕ ','♗ '])
+b_r,b_h,b_p,b_k,b_q,b_b = '♜ ','♞ ','♟ ','♚ ','♛ ','♝ '
+w_r,w_h,w_p,w_k,w_q,w_b = '♖ ','♘ ','♙ ','♔ ','♕ ','♗ '
+moves = []
+
 
 def print_grid():
     os.system('cls' if os.name == 'nt' else 'clear')
-    result = '\n----------------------------------\n'.join(' | '.join(map(str, row))for row in grid)
-    print(result)
+    print('version 2 of chess\nit is still not perfect\njust enter the row and col in the first prompt and then the new row and col ')
+    for i in range(10):
+        for j in range(10):
+            bg_color = BLACK_BG if (i + j) % 2 == 0 else WHITE_BG  
+            piece = grid[i][j]
+            if i == 9 or i == 0 or j ==0 or j == 9:
+                print(f"{RED_BG}{grid[i][j]}{RESET}", end="")
+            elif piece in black_pieces:
+                print(f"{bg_color}{BLACK_TEXT}{piece}{RESET}", end="")
+            elif piece in white_pieces:
+                print(f"{bg_color}{WHITE_TEXT}{piece}{RESET}", end="")
+            else:  
+                print(f"{bg_color}{piece}{RESET}", end="")
+        print()
 
 def start_layout():
+    alphabet = list(string.ascii_uppercase)
+    grid[0][0],grid[9][9],grid[9][0],grid[0][9] = '   ','   ','   ','   '
     for i in range(8):
-        grid[i][0] = 8-i
+        grid[8-i][0] = ' '+str(i+1)+ ' '
+        grid[8-i][9] = ' '+str(i+1)+ ' '
+        grid[0][i+1] = alphabet[i]+' '
+        grid[9][i+1] = alphabet[i]+' '
+    for i in range(8):
+        grid[2][i+1] = b_p
+        grid[7][i+1] = w_p
+    grid[8][8],grid[8][1],grid[1][1],grid[1][8] = w_r,w_r,b_r,b_r
+    
+    grid[8][7],grid[8][2],grid[1][7],grid[1][2] = w_h,w_h,b_h,b_h
+    grid[8][6],grid[8][3],grid[1][6],grid[1][3] = w_b,w_b,b_b,b_b
+    grid[8][5],grid[8][4],grid[1][5],grid[1][4] = w_q,w_k,b_q,b_k
+
+def pick_piece(turn,player):
+    global moves
     alphabet = list(string.ascii_lowercase)
-    for i in range(8):
-        grid[8][i+1] = alphabet[i]
-    rook_locations = [(0,1),(0,8),(7,1),(7,8)]
-    knight_locations = [(0,2),(0,7),(7,2),(7,7)]
-    bishop_locations = [(0,3),(0,6),(7,3),(7,6)]
-    for r,c in rook_locations:
-        if r == 0:
-            grid[r][c] = b_r
-        else:
-            grid[r][c] = w_r
-    for r,c in bishop_locations:
-        if r == 0:
-            grid[r][c] = b_b
-        else:
-            grid[r][c] = w_b
-    for r,c in knight_locations:
-        if r == 0:
-            grid[r][c] = b_h
-        else:
-            grid[r][c] = w_h
-    for i in range(8):
-        grid[1][i+1] = b_p
-        grid[6][i+1] = w_p
-    grid[0][4] = b_k
-    grid[7][4] = w_k
-    grid[0][5] = b_q
-    grid[7][5] = w_q
-
-
-def move():
-    moves = []
-    global white_check,black_check,turn
-    turn = white_pieces
     while True:
-        if turn == white_pieces:
-            player = 'white'
-        else:
-            player = 'black'
-        chosen = input(player + ' enter the column and the row of your piece or undo ')
-        if chosen == 'undo':
-            undo(moves)
-            print_grid()
-            continue
-        convert_let = {'a':1,'b':2,'c':3,'d':4,'e':5,'f':6,'g':7,'h':8}
-        try:
-            for letter in chosen:
-                if letter in convert_let:
-                    col = convert_let[letter]
-                else:
-                    row = 8 -  int(letter)
-        except ValueError:
-            print('you didnt enter a valid square')
-            continue
-        if grid[row][col] in turn:
-            print('you have chosen ' + grid[row][col])
-            new_pos = input('enter the column and the row of where to move your piece ')
-            try:
-                for letter in new_pos:
-                    if letter in convert_let:
-                        new_col = convert_let[letter]
-                    else:
-                        new_row = 8 -  int(letter)
-            except ValueError:
-                print('please enter a legal position')
-                continue
-            if legal_move(row,col,new_row,new_col,turn):
-                grid[new_row][new_col] = grid[row][col]
-                grid[row][col] = ' '
-                moves.insert(0,(row,col,new_row,new_col))
-                check()
-                if (white_check and turn == white_pieces) or (black_check and turn == black_pieces):
-                    grid[row][col] = grid[new_row][new_col]
-                    grid[new_row][new_col] = ' '
-                    del moves[0]
-                    print('you didnt get out of check')
-                    continue
-                print_grid()
-                if white_check:
-                    if checkmate():
-                        print('checkmate well done')
-                        exit()
-                    print('check on white king')
-                if black_check:
-                    print('check on black king')
-                    if checkmate():
-                        print('checkmate well done')
-                        exit()
-                if turn == white_pieces:
-                    turn = black_pieces
-                else:
-                    turn = white_pieces
-            elif castle(row,new_row,col,new_col):
-                grid[new_row][new_col] = grid[row][col]
-                grid[row][col] = ' '
-                moves.insert(0,(row,col,new_row,new_col))
-                if new_col == 2:
-                    grid[new_row][new_col+1] = grid[new_row][new_col-1]
-                    grid[new_row][new_col-1] = ' '
-                if new_col == 6:
-                    grid[new_row][new_col-1] = grid[new_row][new_col+2]
-                    grid[new_row][new_col+2] = ' '
-                print_grid()
-                if turn == white_pieces:
-                    turn = black_pieces
-                else:
-                    turn = white_pieces
+        choice = input(player + ' enter letter and then number for piece to move or undo')
+        if choice == 'undo':
+            undo()
+            break
+        for letter in choice:
+            if letter in alphabet:
+                col = alphabet.index(letter) +1
             else:
-                print('move is illegal')
-        else: 
-            print('youve havent picked one of your pieces')
-
-still_castle_long_w,still_castle_short_b,still_castle_long_b,still_castle_short_w = True,True,True,True
-
-def legal_move(row,col,new_row,new_col,turn):
-    def boundaries():
-        if 0<=new_row <= 7 and 0<new_col <=8:
-            if new_row != row or new_col != col:
-                return True
-
-    def movement():
-        global still_castle_long_w,still_castle_short_b,still_castle_long_b,still_castle_short_w
-        if grid[row][col] == b_r or grid[row][col] == w_r or grid[row][col] == b_q or grid[row][col] == w_q:           #rook and rook part of queen
-            step = 1
-            if new_row == row:
-                if col> new_col:
-                    step = -1
-                if all(grid[row][i] == ' ' for i in range(col+step,new_col,step)):
-                    if grid[new_row][new_col] not in turn:
-                        if grid[row][col] == b_k and col == 8:
-                            still_castle_long_b = False
-                        if grid[row][col] == w_k and col == 8:
-                            still_castle_long_w = False
-                        if grid[row][col] == b_k and col == 1:
-                            still_castle_short_b = False
-                        if grid[row][col] == w_k and col == 1:
-                            still_castle_short_w = False
-                        return True
-            elif new_col == col:
-                if row>new_row:
-                    step = -1
-                if all(grid[i][col] == ' ' for i in range(row+step,new_row,step)):
-                    if grid[new_row][new_col] not in turn:
-                        if grid[row][col] == b_r and col == 8:
-                            still_castle_long_b = False
-                        elif grid[row][col] == w_r and col == 8:
-                            still_castle_long_w = False
-                        elif grid[row][col] == b_r and col == 1:
-                            still_castle_short_b = False
-                        elif grid[row][col] == w_r and col == 1:
-                            still_castle_short_w = False
-                        return True
-        elif grid[row][col] == w_p or grid[row][col] == b_p:           #pawn
-            step = 1
-            if grid[new_row][new_col] == ' ':
-                if new_col == col:
-                    if (grid[row][col] == b_p and new_row-row == 1) or (grid[row][col] == b_p and new_row-row ==2 and row ==1 and grid[row+1][col]==' '):
-                        return True
-                    elif (grid[row][col] == w_p and new_row-row == -1) or (grid[row][col] == w_p and new_row-row ==-2 and row ==6 and grid[row-1][col]==' '):
-                        return True
-            elif grid[new_row][new_col] not in turn:
-                if (grid[row][col] == b_p and new_row-row == 1 and abs(new_col-col) == 1) or (grid[row][col] == w_p and new_row-row == -1 and abs(new_col-col) == 1):
-                    return True
-                
-        elif grid[row][col] == w_h or grid[row][col] == b_h:         # horse
-            if grid[new_row][new_col] not in turn:
-                if (abs(new_row-row) == 2 and abs(new_col - col)== 1) or(abs(new_row-row) == 1 and abs(new_col - col)== 2):
-                    return True
-                
-        elif grid[row][col] == w_k or grid[row][col] == b_k:         #king
-            if grid[new_row][new_col] not in turn:
-                if 0<=abs(new_row-row)<=1 and 0<=abs(new_col-col)<=1:
-                    if grid[row][col] == b_k:
-                        still_castle_long_b ,still_castle_short_b= False,False
-                    elif grid[row][col] == w_k:
-                        still_castle_long_w,still_castle_short_w = False,False
-                    return True
-        if grid[row][col] == w_b or grid[row][col] == b_b or grid[row][col] == w_q or grid[row][col] == b_q:         #bishop and bishop part queen
-            step = 1
-            if abs(new_row-row) == abs(new_col-col):
-                if new_row < row:
-                    step = -1
-                if all(grid[step+row+(i*step)][step+col+(i*step)] == ' ' for i in range(abs(new_row-row)-1)):
-                    if grid[new_row][new_col] not in turn:
-                        return True
-            if abs(row+col) == abs(new_col+new_row):
-                if new_row < row:
-                    step_row,step_col = -1,1   
+                row = 9-int(letter)
+        if grid[row][col] in turn:
+            print('you have chosen '+ grid[row][col])
+            choice = input(player + ' enter letter and then number for where the piece should go')
+            for letter in choice:
+                if letter in alphabet:
+                    new_col = alphabet.index(letter) +1
                 else:
-                    step_row , step_col = 1,-1
-                if all(grid[step_row+row+(i*step_row)][step_col+col+(i*step_col)] == ' ' for i in range(abs(new_row-row)-1)):
-                    if grid[new_row][new_col] not in turn:
-                        return True  
-    if boundaries():
-        if movement():           
-            return True 
+                    new_row = 9-int(letter)
+            try:
+                if 0<new_row<=8 and 0<new_col<=8:
+                    if legal(turn,row,col,new_row,new_col):
+                        promotion()
+                        break
+            except(UnboundLocalError):
+                pass
+        print('illegal move')
 
-def castle(row,new_row,col,new_col):
-    global still_castle_long_w,still_castle_short_b,still_castle_long_b,still_castle_short_w
-    if grid[row][col] == b_k or grid[row][col] == w_k:          #castle
-        if (new_row == 7 and new_col == 2 and grid[row][col] == w_k):
-            if still_castle_short_w:
-                if grid[row][col-1] == ' ' and grid[row][col-2]== ' ':
-                    still_castle_long_w,still_castle_short_w = False,False
+def legal(turn,row,col,new_row,new_col):
+    def check_move(turn,row,col,new_row,new_col):
+        global black_castle_short,black_castle_long,white_castle_short,white_castle_long
+        if grid[row][col] in (b_r,w_r,b_q,w_q):
+            if row == new_row:
+                if all(grid[row][c] == '  ' for c in range(min(col, new_col)+1, max(col, new_col))):
+                    if grid[row][col] == b_r and col == 1:
+                        black_castle_short = False
+                    elif grid[row][col] == b_r and col == 8:
+                        black_castle_long = False
+                    elif grid[row][col] == w_r and col == 8:
+                        white_castle_long = False
+                    elif grid[row][col] == w_r and col == 1:
+                        white_castle_short = False                    
                     return True
-        elif (new_row == 0 and new_col == 2 and grid[row][col] == b_k):
-            if still_castle_short_b:
-                if grid[row][col-1] == ' ' and grid[row][col-2]== ' ':
-                    still_castle_long_b,still_castle_short_b = False,False
+            elif col == new_col:
+                if all(grid[r][col] == '  ' for r in range(min(row, new_row)+1, max(row, new_row))):
+                    if grid[row][col] == b_r and col == 1:
+                        black_castle_short = False
+                    elif grid[row][col] == b_r and col == 8:
+                        black_castle_long = False
+                    elif grid[row][col] == w_r and col == 8:
+                        white_castle_long = False
+                    elif grid[row][col] == w_r and col == 1:
+                        white_castle_short = False  
                     return True
-        elif (new_row == 0 and new_col == 6 and grid[row][col] == b_k):
-            if still_castle_long_b:
-                if grid[row][col+1] == ' ' and grid[row][col+2]== ' ':
-                    still_castle_long_b,still_castle_short_b = False,False
+                
+        if grid[row][col] in (b_b,w_b,w_q,b_q):
+            if abs(col - new_col) == abs(row - new_row): 
+                if all(grid[r][c] == '  ' for r, c in zip(
+                        range(min(row, new_row) + 1, max(row, new_row)),  
+                        range(min(col, new_col) + 1, max(col, new_col)))): 
                     return True
-        elif (new_row == 7 and new_col == 6 and grid[row][col] == w_k):
-            if still_castle_long_w:
-                if grid[row][col+1] == ' ' and grid[row][col+2]== ' ':
-                    still_castle_long_w,still_castle_short_w = False,False
+                if all(grid[r][c] == '  ' for r, c in zip(
+                        range(min(row, new_row) + 1, max(row, new_row)),  
+                        range(max(col, new_col) - 1, min(col, new_col), -1))): 
                     return True
+                
+        elif grid[row][col] in (b_k,w_k):
+            if 0<=abs(col-new_col)<=1 and 0<=abs(row-new_row)<=1:
+                if turn == black_pieces:
+                    black_castle_short,black_castle_long = False,False
+                else:
+                    white_castle_long,white_castle_short = False,False
+                return True
+            
+        elif grid[row][col] in (b_h,w_h):
+            if (abs(col-new_col) == 2 and abs(row-new_row) == 1) or (abs(col-new_col) == 1 and abs(row-new_row) == 2):
+                return True
+            
+        elif grid[row][col] == w_p:
+            if row == 7:
+                if 0<row-new_row<=2 and col==new_col and grid[new_row][new_col] == '  ':
+                    return True
+            if row-new_row == 1 and col==new_col and grid[new_row][new_col] == '  ':
+                return True
+            if row-new_row == 1 and abs(col-new_col)==1 and grid[new_row][new_col] not in turn and grid[new_row][new_col] in all_pieces:
+                return True
+        elif grid[row][col] == b_p:
+            if row == 2:
+                if 0<new_row-row<=2 and col==new_col and grid[new_row][new_col] == '  ':
+                    return True
+            if new_row-row == 1 and col==new_col and grid[new_row][new_col] == '  ':
+                return True
+            if new_row-row== 1 and abs(col-new_col)==1 and grid[new_row][new_col] not in turn and grid[new_row][new_col] in all_pieces:
+                return True
+    def check(turn):
+        for r in range(8):
+            for c in range(8):
+                if grid[r+1][c+1] == b_k:
+                    black_r, black_c = r+1,c+1
+                if grid[r+1][c+1] == w_k:
+                    white_r, white_c = r+1,c+1
+        for i in range(8):
+            for j in range(8):
+                if turn == black_pieces:
+                    if grid[i+1][j+1] in white_pieces:
+                        if check_move(turn,row=i+1,col=j+1,new_row=black_r , new_col=black_c):
+                            return True
+                if turn == white_pieces:
+                    if grid[i+1][j+1] in black_pieces:
+                        if check_move(turn,row=i+1,col=j+1,new_row=white_r , new_col=white_c):
+                            return True
+    def castle():
+        global black_castle_short,black_castle_long,white_castle_short,white_castle_long
+        if ((grid[row][col] == b_k and black_castle_short and new_row==row and new_col==2) or
+            grid[row][col] == b_k and black_castle_long and new_row==row and new_col==6):
+            black_castle_long,black_castle_short = False,False
+            return True
+        elif ((grid[row][col] == w_k and white_castle_short and new_row==row and new_col==2) or
+            grid[row][col] == w_k and white_castle_long and new_row==row and new_col==6):
+            white_castle_long,white_castle_short = False,False
+            return True
+    
+    def checkmate():
+        if turn == black_pieces:
+            check_turn = white_pieces
+        else:
+            check_turn = black_pieces
+        if check(turn = check_turn):
+            for i in range(8):
+                for j in range(8):
+                    if grid[i+1][j+1] in check_turn:
+                        for a in range(8):
+                            for b in range(8):
+                                if check_move(turn=check_turn,row=i+1,col=j+1,new_row=a+1,new_col=b+1) and grid[a+1][b+1] not in check_turn:
+                                    moves.insert(0,(row,col,new_row,new_col,grid[new_row][new_col]))
+                                    grid[a+1][b+1] = grid[i+1][j+1] 
+                                    grid[i+1][j+1] = '  '
+                                    if not check(turn =check_turn):
+                                        undo()
+                                        return False
+                                    else:
+                                        undo()
+            return True
+
+    if not check(turn):
+        if check_move(turn,row,col,new_row,new_col):
+            if grid[new_row][new_col] not in turn:
+                moves.insert(0,(row,col,new_row,new_col,grid[new_row][new_col]))
+                grid[new_row][new_col] = grid[row][col]
+                grid[row][col] = '  '
+                if checkmate():
+                    print_grid()
+                    print('game over checkmate')
+                    exit()
+                return True
+        elif castle():
+            if grid[new_row][new_col] == '  ':
+                if all(grid[row][c] == '  ' for c in range(min(col, new_col)+1, max(col, new_col))):
+                    if grid[new_row][new_col-1] in (b_r,w_r) and grid[new_row][new_col+2] in turn:
+                        grid[new_row][new_col] = grid[row][col]
+                        grid[row][col] = '  '
+                        grid[new_row][new_col+1] = grid[new_row][new_col-1]
+                        grid[new_row][new_col-1] ='  ' 
+                        return True
+                    elif grid[new_row][new_col+2] in (b_r,w_r) and grid[new_row][new_col+2] in turn and grid[new_row][new_col+1] == '  ':
+                        grid[new_row][new_col-1] = grid[new_row][new_col+2]
+                        grid[new_row][new_col+2] ='  '     
+                        grid[new_row][new_col] = grid[row][col]
+                        grid[row][col] = '  '  
+                        return True
+            print('you cannot castle')
+    elif check(turn):
+        if check_move(turn,row,col,new_row,new_col):
+            if grid[new_row][new_col] not in turn:
+                moves.insert(0,(row,col,new_row,new_col,grid[new_row][new_col]))
+                grid[new_row][new_col] = grid[row][col]
+                grid[row][col] = '  '
+                if not check(turn):
+                    return True
+                else:
+                    undo()
+                    print('you didnt get out of check')
+                    return False
+    
     return False
-                                   
-def check():
-    global white_check, black_check
-    white_check = False
-    black_check = False
-    for i in range(8):
-        for j in range(8):
-            if grid[i][1+j] == b_k: 
-                b_k_r = i
-                b_k_c = 1+j
-            if grid[i][1+j] == w_k:
-                w_k_r = i
-                w_k_c = 1+j                
-    for i in range(8):
-        for j in range(8):
-            if grid[i][1+j] in black_pieces:
-                if legal_move(row=i,col=1+j,new_row=w_k_r,new_col=w_k_c,turn=black_pieces):
-                    white_check = True
-            if grid[i][1+j] in white_pieces:
-                if legal_move(row=i,col=1+j,new_row=b_k_r,new_col=b_k_c,turn=white_pieces):
-                    black_check = True
-def checkmate():
-    captured_piece = []
-    if white_check:
-        for i in range(8):
-            for j in range(8):
-                if grid[i][1+j] in white_pieces:
-                    for new_row in range (8):
-                        for new_col in range(8):
-                            if legal_move(row = i,col=1+j,new_row = new_row,new_col=new_col+1,turn=white_pieces):
-                                captured_piece.append(grid[new_row][new_col+1])
-                                grid[new_row][new_col+1] = grid[i][j+1]
-                                grid[i][j+1] = ' '
-                                check()
-                                grid[i][j+1] = grid[new_row][new_col+1]
-                                grid[new_row][new_col+1] = captured_piece.pop()
-                                if not white_check:
-                                    return False    
-    if black_check:
-        for i in range(8):
-            for j in range(8):
-                if grid[i][1+j] in black_pieces:
-                    for new_row in range (8):
-                        for new_col in range(8):
-                            if legal_move(row = i,col=1+j,new_row = new_row,new_col=new_col+1,turn=black_pieces):
-                                captured_piece.append(grid[new_row][new_col+1])
-                                grid[new_row][new_col+1] = grid[i][j+1]
-                                grid[i][j+1] = ' '
-                                check()
-                                grid[i][j+1] = grid[new_row][new_col+1]
-                                grid[new_row][new_col+1] = captured_piece.pop()
-                                if not black_check:
-                                    return False
-    return True
-def undo(moves):
-    global turn
-    row,col,new_row,new_col = moves[0]
-    grid[row][col] = grid[new_row][new_col]
-    grid[new_row][new_col] = ' '
-    del moves[0]
-    if grid[row][col] in black_pieces:
-        turn = black_pieces
-    elif grid[row][col] in white_pieces:
-        turn = white_pieces
 
-start_layout()
-print_grid()
-move()
+def promotion():
+    for i in range(8):
+        if grid[1][i+1] == w_p:
+            while True:
+                piece_name = {'rook':w_r,'knight':w_h,'queen':w_q,'bishop':w_b}
+                choose = input('choose one rook, knight, queen or bsihop to promote your pawn')
+                if choose in piece_name:
+                    grid[1][i+1] = piece_name[choose]
+                    break
+                else:
+                    print('please write exactly as written above')
+        if grid[8][i+1] == b_p:
+            while True:
+                piece_name = {'rook':b_r,'knight':b_h,'queen':b_q,'bishop':b_b}
+                choose = input('choose one rook, knight, queen or bsihop to promote your pawn')
+                if choose in piece_name:
+                    grid[1][i+1] = piece_name[choose]
+                    break
+                else:
+                    print('please write exactly as written above')
+
+def undo():
+    global moves
+    row,col,new_row,new_col,piece = moves[0]
+    grid[row][col] = grid[new_row][new_col]
+    grid[new_row][new_col] = piece
+    del moves[0]
+
+
+black_castle_short,black_castle_long,white_castle_short,white_castle_long = True,True,True,True
+def play():
+    turn = white_pieces
+    player = 'white'
+    start_layout()
+    print_grid()
+    while True:
+        pick_piece(turn,player)
+        print_grid()
+        if turn == white_pieces:
+            turn = black_pieces
+            player = 'black'
+        else:
+            turn = white_pieces
+            player = 'white'
+
+play()
