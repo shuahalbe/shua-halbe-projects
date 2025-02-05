@@ -1,0 +1,216 @@
+import time
+import random
+import os
+import string
+import copy
+
+pieces = ["⚫","⚪"]
+white_piece = "⚪"
+black_piece = "⚫"
+grid_pieces = [" ┌", "─┐", " └", "─┘",'─┼'," ├", "─┤", "─┬", "─┴"]
+WHITE_BG = "\033[48;2;240;240;220m" 
+BROWN_BG = "\033[48;2;140;100;80m"  
+RED_BG = "\033[41m"
+RESET = "\033[0m" 
+grid = [['  'for col in range(10)]for row in range(10)]
+
+def create_grid():
+    alphabet = list(string.ascii_lowercase)
+    for i in range(8):
+        if i<9:
+            grid[i+1][0] = ' '+str(i+1)
+        else:
+            grid[i+1][0] = i+1
+        grid[0][i+1] = ' '+alphabet[i]
+    for i in range(6):
+        for j in range(6):
+            grid[i+2][j+2] = '─┼'
+            grid[i+2][1],grid[7-i][8],grid[1][i+2],grid[8][7-i] = " ├", "─┤", "─┬", "─┴"
+    grid[1][1],grid[1][8],grid[8][1],grid[8][8]=" ┌", "─┐", " └", "─┘"
+    grid[4][4],grid[5][5],grid[4][5],grid[5][4] = white_piece,white_piece,black_piece,black_piece
+
+
+def print_grid():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    for i in range(10):
+        for j in range(10):
+            if i == 0 or i == 9:
+                print(f"{RED_BG}{grid[i][j]}{RESET}", end="")
+            elif j == 0 or j== 9:
+                print(f"{RED_BG}{grid[i][j]}{RESET}", end="")
+            else:
+                print(f"{WHITE_BG}{grid[i][j]}{RESET}", end="")
+        print()
+
+def choose_place(turn,player,original):
+    alphabet = list(string.ascii_lowercase)
+    while True:
+        place = input(player + ' please enter the letter and number for your go or undo')
+        if place == 'undo':
+        
+            break
+        if len(place) == 2:
+            for letter in place:
+                if letter in alphabet:
+                    col = alphabet.index(letter)+1
+                else:
+                    try:
+                        row = int(letter)
+                    except(ValueError):
+                        pass
+            try:
+                if 1<=row<=8 and 1<=col<=8:
+                    if grid[row][col] not in pieces:
+                        grid[row][col] = turn
+                        if find_pieces(row,col,turn):
+                            break
+                        else:
+                            grid[row][col] = original[row][col]
+            except (UnboundLocalError,ValueError,IndexError):
+                pass
+        print('illegal choice, please enter a valid number and letter')
+
+def find_pieces(row,col,turn):
+    flip = []
+    if turn == black_piece:
+        other_piece = white_piece
+    else:
+        other_piece = black_piece
+    if row <7: #check sqaures below
+        add = []
+        for i in range(row+1,9):
+            if check(other_piece,flip,add,turn,row=i,col=col):
+                pass
+            else:
+                break
+
+    if 1<row : #check sqaures above
+        add = []
+        for i in range(row-1,0,-1):
+            if check(other_piece,flip,add,turn,row=i,col=col):
+                pass
+            else:
+                break
+  
+    if 1<col : #check sqaures left
+        add = []
+        for i in range(col-1,0,-1):
+            if check(other_piece,flip,add,turn,row=row,col=i):
+                pass
+            else:
+                break
+
+    if col <7: #check sqaures right
+        add = []
+        for i in range(col+1,9):
+            if check(other_piece,flip,add,turn,row=row,col=i):
+                pass
+            else:
+                break
+
+    add = [] #diagonal \
+    for i in range(1,9):
+        if 1<=row<=8 and 1<=col<=8:
+            if check(other_piece,flip,add,turn,row=row+i,col=col+i):
+                pass
+            else:
+                break 
+    add = []
+    for i in range(1,9):
+        if 1<=row<=8 and 1<=col<=8:
+            if check(other_piece,flip,add,turn,row=row-i,col=col-i):
+                pass
+            else:
+                break 
+
+    add = [] #diagonal /
+    for i in range(1,9):
+        if 1<=row<=8 and 1<=col<=8:
+            if check(other_piece,flip,add,turn,row=row+i,col=col-i):
+                pass
+            else:
+                break 
+    add = []
+    for i in range(1,9):
+        if 1<=row<=8 and 1<=col<=8:
+            if check(other_piece,flip,add,turn,row=row-i,col=col+i):
+                pass
+            else:
+                break
+                  
+    if len(flip) == 0:
+        return False
+    for r,c in flip:
+        grid[r][c] = turn
+    
+    return True
+
+def check(other_piece,flip,add,turn,row,col):
+    if grid[row][col] not in pieces:
+        return False
+    if grid[row][col] == other_piece:
+        add.append((row,col))
+        return True
+    if grid[row][col] == turn:
+        flip.extend(add)
+        return False
+
+
+def game_over():
+    black =0
+    white= 0
+    if all(grid[i+1][j+1] in pieces for i in range(8) for j in range(8)):
+        for i in range(8):
+            for j in range(8):
+                if grid[i+1][j+1] == black_piece:
+                    black+=1
+                else:
+                    white+=1
+        print('white score ' + white)
+        print('black score '+black)
+        if black>white:
+            print('black wins')
+        elif white>black:
+            print('white wins')
+        else:
+            print('draw')
+        return True
+    return False
+
+
+
+
+def play():
+    player = ''
+    turn = black_piece
+    create_grid()
+    ai_play = int(input('1:2 player\n2:play vs ai'))
+    ai_colour = random.randint(1,2)
+    if ai_colour == 1:
+        ai_colour = white_piece
+    else:
+        ai_colour = black_piece
+    original = copy.deepcopy(grid)
+    print_grid()
+    while True:
+        if turn == black_piece:
+            turn = white_piece
+            player = 'white'
+        else:
+            turn = black_piece
+            player = ('black')
+        if ai_play == 1:
+            choose_place(turn,player,original)
+            print_grid()
+            if game_over():
+                exit()
+        elif ai_play == 2:
+            if turn != ai_colour:
+                choose_place(turn,player,original)
+                print_grid()
+                if game_over():
+                    exit()
+            
+
+
+play()
