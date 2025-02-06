@@ -1,0 +1,347 @@
+import random
+import os
+import string
+import copy
+
+#using minmax with alpha beta pruning and move ordering for the ai
+#evaluation needs updating as i dont think its perfect
+
+pieces = ["⚫","⚪"]
+white_piece = "⚪"
+black_piece = "⚫"
+grid_pieces = [" ┌", "─┐", " └", "─┘",'─┼'," ├", "─┤", "─┬", "─┴"]
+WHITE_BG = "\033[48;2;240;240;220m" 
+BROWN_BG = "\033[48;2;140;100;80m"  
+RED_BG = "\033[41m"
+RESET = "\033[0m" 
+grid = [['  'for col in range(10)]for row in range(10)]
+
+def create_grid():
+    alphabet = list(string.ascii_lowercase)
+    for i in range(8):
+        if i<9:
+            grid[i+1][0] = ' '+str(i+1)
+        else:
+            grid[i+1][0] = i+1
+        grid[0][i+1] = ' '+alphabet[i]
+    for i in range(6):
+        for j in range(6):
+            grid[i+2][j+2] = '─┼'
+            grid[i+2][1],grid[7-i][8],grid[1][i+2],grid[8][7-i] = " ├", "─┤", "─┬", "─┴"
+    grid[1][1],grid[1][8],grid[8][1],grid[8][8]=" ┌", "─┐", " └", "─┘"
+    grid[4][4],grid[5][5],grid[4][5],grid[5][4] = white_piece,white_piece,black_piece,black_piece
+
+def print_grid():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    for i in range(10):
+        for j in range(10):
+            if i == 0 or i == 9:
+                print(f"{RED_BG}{grid[i][j]}{RESET}", end="")
+            elif j == 0 or j== 9:
+                print(f"{RED_BG}{grid[i][j]}{RESET}", end="")
+            else:
+                print(f"{WHITE_BG}{grid[i][j]}{RESET}", end="")
+        print()
+
+def choose_place(turn,player,original):
+    alphabet = list(string.ascii_lowercase)
+    while True:
+        place = input(player + ' please enter the letter and number for your go or undo')
+        if place == 'undo':
+            break
+        if len(place) == 2:
+            for letter in place:
+                if letter in alphabet:
+                    col = alphabet.index(letter)+1
+                else:
+                    try:
+                        row = int(letter)
+                    except(ValueError):
+                        pass
+            try:
+                if 1<=row<=8 and 1<=col<=8:
+                    if grid[row][col] not in pieces:
+                        grid[row][col] = turn
+                        flip = find_pieces(row,col,turn)
+                        if len(flip) == 0:
+                            grid[row][col] = original[row][col]
+                            print('move flipped no pieces')
+                            continue
+                        for r,c in flip:
+                            grid[r][c] = turn
+                        break
+            except (UnboundLocalError,ValueError,IndexError):
+                pass
+        print('illegal choice, please enter a valid number and letter')
+
+def find_pieces(row,col,turn):
+    flip = []
+    if turn == black_piece:
+        other_piece = white_piece
+    else:
+        other_piece = black_piece
+    if row <7: #check sqaures below
+        add = []
+        for i in range(row+1,9):
+            if check(other_piece,flip,add,turn,row=i,col=col):
+                pass
+            else:
+                break
+
+    if 1<row : #check sqaures above
+        add = []
+        for i in range(row-1,0,-1):
+            if check(other_piece,flip,add,turn,row=i,col=col):
+                pass
+            else:
+                break
+  
+    if 1<col : #check sqaures left
+        add = []
+        for i in range(col-1,0,-1):
+            if check(other_piece,flip,add,turn,row=row,col=i):
+                pass
+            else:
+                break
+
+    if col <7: #check sqaures right
+        add = []
+        for i in range(col+1,9):
+            if check(other_piece,flip,add,turn,row=row,col=i):
+                pass
+            else:
+                break
+
+    add = [] #diagonal \
+    for i in range(1,9):
+        if 1<=row<=8 and 1<=col<=8:
+            if check(other_piece,flip,add,turn,row=row+i,col=col+i):
+                pass
+            else:
+                break 
+    add = []
+    for i in range(1,9):
+        if 1<=row<=8 and 1<=col<=8:
+            if check(other_piece,flip,add,turn,row=row-i,col=col-i):
+                pass
+            else:
+                break 
+
+    add = [] #diagonal /
+    for i in range(1,9):
+        if 1<=row<=8 and 1<=col<=8:
+            if check(other_piece,flip,add,turn,row=row+i,col=col-i):
+                pass
+            else:
+                break 
+    add = []
+    for i in range(1,9):
+        if 1<=row<=8 and 1<=col<=8:
+            if check(other_piece,flip,add,turn,row=row-i,col=col+i):
+                pass
+            else:
+                break
+    return flip
+
+def check(other_piece,flip,add,turn,row,col):
+    if grid[row][col] not in pieces:
+        return False
+    if grid[row][col] == other_piece:
+        add.append((row,col))
+        return True
+    if grid[row][col] == turn:
+        flip.extend(add)
+        return False
+
+def find_moves(turn):
+    legal_moves = []
+    for i in range(8):
+        for j in range(8):
+            if grid[i+1][j+1] not in pieces:
+                if not find_pieces(row=i+1,col=j+1,turn=turn):
+                    pass
+                else:
+                    legal_moves.append((i+1,j+1))
+    return legal_moves
+    
+
+
+def evaluate():
+    piece_difference_weight = 5
+    mobility_weight = 5
+
+    corners =[(1,1),(8,8),(1,8),(8,1)]
+    player_corners = sum(1 for x, y in corners if grid[x][y] == white_piece)
+    ai_corners = sum(1 for x, y in corners if grid[x][y] == black_piece)
+    mobility = len(find_moves(turn=black_piece)) - len(find_moves(turn=white_piece))
+    black_pieces = sum(row.count(black_piece) for row in grid)
+    white_pieces = sum(row.count(white_piece) for row in grid)
+    edges = [(r, c) for r in [1, 8] for c in range(8)] + [(r, c) for r in range(8) for c in [1, 8]]
+    black_edges = sum(1 for r, c in edges if grid[r][c] == black_piece)
+    white_edges = sum(1 for r, c in edges if grid[r][c] == white_piece)
+    edge_value = (black_edges - white_edges)
+
+    total_pieces = black_pieces + white_pieces
+    if total_pieces < 20:  
+        mobility_weight *= 2
+        piece_difference_weight *= 0.5
+    elif total_pieces > 50:  
+        piece_difference_weight *= 2
+        mobility_weight *= 0.5
+
+    score = (
+        (50 * (ai_corners-player_corners)) +
+        (15*edge_value)+
+        (mobility_weight * mobility) +
+        (piece_difference_weight*(black_pieces-white_pieces))
+    )
+    return score
+
+def order_moves(original,moves, turn):
+    scored_moves = []
+    for move in moves:
+        r, c = move
+        grid[r][c] = turn 
+        flip = find_pieces(row=r, col=c, turn=turn)
+        for fr, fc in flip:
+            grid[fr][fc] = turn  
+        score = evaluate() 
+        grid[r][c] = original[r][c]
+        for fr, fc in flip:
+            grid[fr][fc] = white_piece if turn == black_piece else black_piece
+
+        scored_moves.append((score, move))
+
+    return [move for _, move in sorted(scored_moves, reverse=(turn == black_piece))]
+
+def minimax(is_maximising,depth,original,alpha,beta):
+    if depth == 0 or game_over():
+        return evaluate()
+    moves = find_moves(turn=black_piece if is_maximising else white_piece)
+    moves = order_moves(original,moves,turn = black_piece if is_maximising else white_piece)
+
+    if is_maximising:
+        best_score = -float('inf')  
+        found_move = False
+        for move in moves:
+            found_move = True
+            i, j = move
+            grid[i][j] = black_piece
+            flip = find_pieces(row=i,col=j,turn=black_piece)
+            for r,c in flip:
+                grid[r][c] = black_piece  
+            score = minimax(False,depth-1,original,alpha,beta)
+            grid[i][j] = original[i][j]
+            for r,c in flip:
+                grid[r][c] = original[r][c]
+            best_score = max(score, best_score) 
+            alpha = max(alpha, best_score)
+            if beta<=alpha:
+                break
+        if not found_move:  
+            return evaluate()
+        return best_score
+
+    else:
+        best_score = float('inf')  
+        found_move = False
+        for move in moves:
+            found_move = True
+            i, j = move
+            grid[i][j] = white_piece 
+            flip = find_pieces(row=i,col=j,turn=white_piece)
+            for r,c in flip:
+                grid[r][c] = white_piece 
+            score = minimax(True,depth-1,original,alpha,beta) 
+            grid[i][j] = original[i][j]
+            for r,c in flip:
+                grid[r][c] = original[r][c]
+            best_score = min(score, best_score)
+            beta = min(beta, best_score)
+            if beta<=alpha:
+                break
+        if not found_move:  
+            return evaluate()
+        return best_score
+    
+def find_best_move(original):
+    best_score = -float('inf')
+    best_move = None
+    moves = find_moves(turn=black_piece)
+    moves = order_moves(original,moves,turn = black_piece)
+    for move in moves:
+        depth = 5
+        i, j = move
+        grid[i][j] = black_piece
+        flip = find_pieces(row=i,col=j,turn=black_piece)
+        for r,c in flip:
+            grid[r][c] = black_piece  
+        score = minimax(False,depth,original,alpha=-float('inf'),beta=float('inf'))  
+        grid[i][j] = original[i][j]  
+        for r,c in flip:
+            grid[r][c] = original[r][c]
+
+        if score > best_score:  
+            best_score = score
+            best_move = move
+
+    return best_move
+
+
+def game_over():
+    if len(find_moves(turn = black_piece)) == 0 and len(find_moves(turn = white_piece)) ==0:
+        return True
+    if all(grid[i+1][j+1] in pieces for i in range(8) for j in range(8)):
+        return True
+    return False
+
+def play():
+    player = ''
+    turn = random.randint(1,2)
+    if turn == 1:
+        turn = black_piece
+    else:
+        turn = white_piece
+    create_grid()
+    original = copy.deepcopy(grid)
+    print_grid()
+    while True:
+        if turn == black_piece:
+            turn = white_piece
+            player = 'white'
+        else:
+            turn = black_piece
+            player = ('black')
+        if turn == white_piece:
+            if len(find_moves(turn)) == 0:
+                continue
+            choose_place(turn,player,original)
+            print_grid()
+        elif turn == black_piece:
+            if len(find_moves(turn)) == 0:
+                continue
+            original = copy.deepcopy(grid)
+            row,col = find_best_move(original)
+            grid[row][col] = black_piece
+            flip = find_pieces(row,col,turn)
+            for r,c in flip:
+                grid[r][c] = turn 
+            print_grid()
+            print('computer move',row,col)
+        if game_over():
+            player_score =0
+            ai_score = 0
+            print('game over')
+            for i in range(8):
+                for j in range(8):
+                    if grid[i+1][j+1] == white_piece:
+                        player_score +=1
+                    elif grid[i+1][j+1] == black_piece:
+                        ai_score +=1
+            print('ai has ' +str(ai_score))
+            print('player '+ str(player_score))
+
+
+
+            
+play()
