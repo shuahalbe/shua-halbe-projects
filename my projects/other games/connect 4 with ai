@@ -168,12 +168,19 @@ def evaluate():
         (centre_control*centre_control_weight)
     )
     return score
-    
+
+transposition_table = {}
 def minimax(is_maximising,depth,original,alpha,beta):
+    board_hash = hash(str(grid))
     if depth == 0 or win():
-        return evaluate()
+        score = evaluate()
+        transposition_table[board_hash] = score
+        return score
     moves = legal_moves()
     moves = order_moves(original,moves,turn = yellow_piece if is_maximising else red_piece) 
+
+    if board_hash in transposition_table:
+        return transposition_table[board_hash] 
 
     if is_maximising:
         best_score = -float('inf')  
@@ -190,6 +197,7 @@ def minimax(is_maximising,depth,original,alpha,beta):
                 break
         if not found_move:  
             return evaluate()
+        transposition_table[board_hash] = best_score
         return best_score
 
     else:
@@ -207,6 +215,7 @@ def minimax(is_maximising,depth,original,alpha,beta):
                 break
         if not found_move:  
             return evaluate()
+        transposition_table[board_hash] = best_score
         return best_score
     
 def find_best_move(original):
@@ -215,7 +224,7 @@ def find_best_move(original):
     moves = legal_moves()
     moves = order_moves(original,moves,turn = yellow_piece) 
     for move in moves:
-        depth = 5
+        depth = 6
         i, j = move
         grid[i][j] = yellow_piece  
         score = minimax(False,depth,original,alpha=-float('inf'),beta=float('inf'))  
