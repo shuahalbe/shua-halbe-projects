@@ -1,0 +1,295 @@
+import string
+import time
+import random
+import os
+import copy
+from multiprocessing import Pool
+
+WHITE_BG = "\033[48;2;240;240;220m" 
+BROWN_BG = "\033[48;2;140;100;80m"  
+RED_BG = "\033[41m"
+RESET = "\033[0m" 
+vertical_line = '│'
+horizontal_line = '───'
+size = int(input('enter grid size'))
+size = size*2
+
+grid = [[' ' for col in range(size+2)]for row in range(size+2)]
+
+def start_layout():
+    global size
+    alphabet = list(string.ascii_uppercase)
+    grid[0][0],grid[size+1][0],grid[size+1][size+1],grid[0][size+1] ='   ','   ','   ','   '
+    for i in range(size):
+        if (i+1)%2 != 0:
+            grid[0][i+1] = alphabet[round(i/2)]
+            grid[size+1][i+1] = alphabet[round(i/2)]
+        else:
+            grid[0][i+1] = '   '
+            grid[size+1][i+1] = '   '
+         
+        if (i+1)%2 != 0:
+            if i<18:
+                grid[i+1][0] = ' '+str(round(i/2)+1)+' '
+                grid[i+1][size+1] = ' '+str(round(i/2)+1)+' '
+            else:
+                grid[i+1][0] = str(round(i/2)+1)+' '
+                grid[i+1][size+1] = ' '+str(round(i/2)+1)
+        else:
+                grid[i+1][0] = '   '
+                grid[i+1][size+1] = '   '     
+    for i in range(size):
+        for j in range(size):
+            if (j+1)%2 != 0 and (i+1)%2 !=0:
+                grid[i+1][j+1] = '•'
+            elif (j+1)%2 == 0 and (i+1)%2 !=0:
+                grid[i+1][j+1] = '   '
+            elif (j+1)%2 == 0 and (i+1)%2 ==0:
+                grid[i+1][j+1] = '   '
+    
+def print_grid():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    for i in range(size+2):
+        for j in range(size+2):
+            if i == 0 or i==size+1 or j==0 or j==size+1:
+                print(f"{RED_BG}{grid[i][j]}{RESET}", end="")
+            else:
+                print(f"{WHITE_BG}{grid[i][j]}{RESET}", end="")
+        print()
+
+def choose_place():
+    global size
+    alphabet = list(string.ascii_lowercase)
+    while True:
+        row = 0
+        choice = input('enter number then letter for where you want to draw line from')
+        if len(choice) in (2,3):
+            try:
+                for letter in choice:
+                    if letter in alphabet:
+                        col = alphabet.index(letter)
+                    else:
+                        row = row*10 + int(letter)
+                if 1<=row<=(size/2) and 0<=col<=(size/2)-1:
+                    while True:
+                        choice = int(input('1: up\n2: down\n3: left\n4: right'))
+                        if choice ==1:
+                            new_row = row -1
+                            new_col = col 
+                        elif choice == 2:
+                            new_row = row +1
+                            new_col = col                       
+                        elif choice == 3:
+                            new_row = row
+                            new_col = col -1    
+                        elif choice == 4:
+                            new_row = row
+                            new_col = col +1
+                        else:
+                            print('enter only 1-4')
+                            continue  
+                        break  
+                    if 1<=new_row<=(size/2) and 0<=new_col<=(size/2)-1:                        
+                        col = (col*2)+1
+                        new_col = (new_col*2)+1
+                        row = (row*2) - 1
+                        new_row = (new_row*2)-1
+                        if row == new_row:
+                            if grid[row][round((col+new_col)/2)] == '   ':
+                                grid[row][round((col+new_col)/2)] = horizontal_line
+                                return(row,round((col+new_col)/2))
+                            else:
+                                print('line already taken')
+                                continue
+                        elif col == new_col:
+                            if grid[round((row+new_row)/2)][col] == ' ':
+                                grid[round((row+new_row)/2)][col] = vertical_line
+                                return(round((row+new_row)/2),col)
+                            else:
+                                print('line already taken')
+                                continue
+                    else:
+                        print('illegal')
+                        continue
+                else:
+                    print('illegal')
+            except (ValueError,IndexError,UnboundLocalError):
+                print('illegal')
+                continue
+def find_boxes(row,col):
+    boxes = []
+    if grid[row][col] == horizontal_line:
+        if all(grid[r][c] in (horizontal_line, vertical_line) for r, c in [
+            (row+1, col-1), (row+1, col+1), (row+2, col)
+        ]):
+            boxes.append((row+1,col)) 
+        if all(grid[r][c] in (horizontal_line, vertical_line) for r, c in [
+            (row-1, col-1), (row-1, col+1), (row-2, col)
+        ]):
+            boxes.append((row-1,col)) 
+    elif grid[row][col] == vertical_line:
+        if all(grid[r][c] in (horizontal_line, vertical_line) for r, c in [
+            (row+1, col-1), (row-1, col-1), (row, col-2)
+        ]):
+            boxes.append((row,col-1)) 
+        if all(grid[r][c] in (horizontal_line, vertical_line) for r, c in [
+            (row+1, col+1), (row-1, col+1), (row, col+2)
+        ]):
+            boxes.append((row,col+1)) 
+    return boxes
+
+
+def legal_moves():
+    legal = []
+    for i in range(1,size,2):
+        for j in range(2,size,2):
+            if grid[i][j] != horizontal_line:
+                legal.append((i,j))
+    for i in range(2,size,2):
+        for j in range(1,size,2):
+            if grid[i][j] != vertical_line:
+                legal.append((i,j))
+    return legal
+
+def end():
+    if all(grid[i][j] == horizontal_line for i in range(1,size,2)for j in range(2,size,2)):
+        if all(grid[i][j] == vertical_line for i in range(2,size,2)for j in range(1,size,2)):
+            return True
+    return False
+
+
+# minimax function and ai bit
+
+def order_moves(original,moves):
+    scored_moves = []
+    for move in moves:
+        r, c = move
+        grid[r][c] = horizontal_line if r%2!=0 else vertical_line
+        score = evaluate() 
+        grid[r][c] = original[r][c]
+
+        scored_moves.append((score, move))
+
+    return [move for _, move in sorted(scored_moves, reverse=True)]
+
+def evaluate():
+    ai_points,player_points = num_boxes()
+    score = ai_points-player_points
+    return score
+
+transposition_table = {}
+def minimax(original,is_maximising,depth,alpha,beta):
+    board_hash = hash(str(grid))
+    if depth == 0 or end():
+        score = evaluate()
+        transposition_table[board_hash] = score
+        return score
+     
+    if board_hash in transposition_table:
+        return transposition_table[board_hash] 
+    
+    best_score = -float('inf') if is_maximising else float('inf')
+    found_move = False
+    for move in order_moves(original, moves=legal_moves()):
+        found_move = True
+        i, j = move
+        grid[i][j] = horizontal_line if i%2!=0 else vertical_line
+        boxes = find_boxes(row=i,col=j)
+        for r,c in boxes:
+            grid[r][c] = 'A.I' if is_maximising else ' P '
+        if len(boxes) == 0:
+            score = minimax(original,not is_maximising, depth - 1, alpha, beta)
+        else:
+            score = minimax(original,is_maximising, depth - 1, alpha, beta)
+        grid[i][j] = original[i][j]  
+        for r,c in boxes:
+            grid[r][c] = original[r][c]
+
+        if is_maximising:
+            best_score = max(best_score, score)
+            alpha = max(alpha, best_score)
+        else:
+            best_score = min(best_score, score)
+            beta = min(beta, best_score)
+
+        if beta <= alpha:  
+            break
+    if not found_move:
+        return evaluate()
+    
+    transposition_table[board_hash] = best_score
+    return best_score
+    
+def find_best_move(original):
+    best_score = -float('inf')
+    best_move = None
+    moves = legal_moves()
+    moves = order_moves(original,moves) 
+    for move in moves:
+        i, j = move
+        grid[i][j] = horizontal_line if i%2!=0 else vertical_line
+        boxes = find_boxes(row=i,col=j)
+        for r,c in boxes:
+            grid[r][c] = 'A.I'
+        for d in range(1,6):
+            if len(boxes) == 0:
+                score = minimax(original,False,depth =d,alpha=-float('inf'),beta=float('inf')) 
+            else:
+                score = minimax(original,True,depth =d,alpha=-float('inf'),beta=float('inf'))
+        grid[i][j] = original[i][j]  
+        for r,c in boxes:
+            grid[r][c] = original[r][c]
+        if score > best_score:  
+            best_score = score
+            best_move = move
+    print(best_score)
+    return best_move
+
+
+def num_boxes():
+    player_points = 0
+    ai_points = 0
+    for i in range(2,size,2):
+        for j in range(2,size,2):
+            if grid[i][j] == ' P ':
+                player_points +=1
+            elif grid[i][j] == 'A.I':
+                ai_points+=1
+    return (ai_points,player_points)                
+
+
+turn = random.randint(1,2)
+if turn == 1: turn = ' P ' 
+else: turn = 'A.I'
+start_layout()
+print_grid()
+while True:
+    print_grid()
+    if turn == ' P ':
+        row,col = choose_place()
+    elif turn == 'A.I':
+        original = copy.deepcopy(grid)
+        row,col = find_best_move(original)
+        if row%2 !=0:
+            grid[row][col] = horizontal_line
+        else:
+            grid[row][col] = vertical_line
+    boxes = find_boxes(row,col)
+    if len(boxes) > 0:
+        for r,c in boxes:
+            grid[r][c] = turn
+        print_grid()
+        if end():
+            ai_points, player_points = num_boxes()    
+            if ai_points<player_points:
+                print('player wins')
+            elif ai_points>player_points:
+                print('ai wins')
+            else:
+                print('draw')
+            print('ai points',ai_points)
+            print('player points', player_points)
+            exit()
+        continue
+    if turn == ' P ': turn = 'A.I' 
+    else: turn = ' P '
