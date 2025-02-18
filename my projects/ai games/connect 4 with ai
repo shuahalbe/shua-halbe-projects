@@ -164,7 +164,7 @@ def evaluate():
         centre_control_weight = 3
     score = (
         (winner) +
-        (eval_triples*20) +
+        (eval_triples*50) +
         (centre_control*centre_control_weight)
     )
     return score

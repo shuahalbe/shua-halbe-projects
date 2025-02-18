@@ -1,0 +1,44 @@
+import sokoban_mechanics
+import keyboard
+import random
+
+while True:
+    choice = int(input('1: magic sokaban levels\n2: original'))
+    if choice not in (1,2):
+        continue
+    try:
+        level_number = int(input('1: pick your own level\n2: random'))
+        if level_number == 1: 
+            level_number = int(input('enter level 1-50 for original and 1-100 for magic sokoban'))
+            if (0<level_number<51 and choice ==2) or (0<level_number<101 and choice ==1) :
+                break
+        elif level_number ==2 and choice ==2:
+            level_number = random.randint(1,50)
+            break
+        elif level_number ==2 and choice == 1:
+            level_number = random.randint(1,100)
+            break 
+    except ValueError:
+        pass
+
+sokoban_mechanics.load_level(level_number,choice)
+while True:
+    sokoban_mechanics.print_grid()
+    print('arrow keys to move u to undo')
+    while True:
+        event = keyboard.read_event()
+        if event.event_type == "down":
+            key = event.name
+            if key in ["up", "down", "left", "right"]:
+                break
+            elif key == 'u':
+                print('u')
+                sokoban_mechanics.undo()
+                break
+    sokoban_mechanics.movement(key)
+    sokoban_mechanics.print_grid()
+    if sokoban_mechanics.win():
+        print('well done you win')
+        break
+
+        

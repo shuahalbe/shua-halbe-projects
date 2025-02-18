@@ -1,0 +1,160 @@
+import sokoban_mechanics
+import random
+from collections import deque
+import time
+import heapq
+
+def start_state(num_col):
+    box_positions = []
+    end_spots = []
+    for i in range(len(grid)):
+        for j in range(num_col):
+            try: 
+                if grid[i][j] == '@':
+                    player_loc =(i,j)
+                if grid[i][j] == '$':
+                    box_positions.append((i,j))
+                if grid[i][j] == '.':
+                    end_spots.append((i,j))
+            except IndexError:
+                pass
+    return player_loc,box_positions,end_spots
+
+def manhattan_distance (box,goal):
+    box_row,box_col = box
+    goal_row,goal_col = goal
+    return abs(box_row - goal_row) + abs(box_col - goal_col)
+
+def heuristic(state,end_spots):
+    total_distance = 0
+    player_loc , boxes = state
+    for box in boxes:
+        min_distance = min(manhattan_distance(box, goal) for goal in end_spots)
+        total_distance += min_distance  
+
+    min_player_distance = min(manhattan_distance(player_loc, box) for box in boxes)
+
+    return total_distance + min_player_distance 
+
+def solver(player_loc,boxes,end_spots):
+    transposition_table = {}
+    dead_squares = find_dead_squares()
+    initial_state = (player_loc, frozenset(boxes))
+    queue = []
+    heapq.heappush(queue, (heuristic(initial_state,end_spots), 0, initial_state, [])) 
+
+    while queue:
+        _, cost_so_far, state, path = heapq.heappop(queue) 
+
+        if win(state,end_spots):
+            return path
+        if state in transposition_table and transposition_table[state] <= cost_so_far:
+            continue
+        
+        transposition_table[state] = cost_so_far
+
+        for move, new_state in get_next(state,dead_squares):  
+            new_cost = cost_so_far + 1  
+            priority = new_cost + heuristic(new_state,end_spots)  
+            heapq.heappush(queue, (priority, new_cost, new_state, path + [move]))
+    return None
+
+def get_next(state,dead_sqaures):
+    directions = ((-1,0),(1,0),(0,-1),(0,1))
+    player_loc , boxes = state
+    pos_moves = []
+    for dx,dy in directions:
+        new_player_loc = (player_loc[0] + dx, player_loc[1] + dy)
+
+        if grid[new_player_loc[0]][new_player_loc[1]] == '#':
+            continue
+
+        if new_player_loc in boxes:
+            new_box = (new_player_loc[0] + dx, new_player_loc[1] + dy)
+            if new_box in dead_sqaures:
+                continue 
+            elif new_box in boxes or grid[new_box[0]][new_box[1]] == "#":
+                continue  
+            new_boxes = set(boxes)
+            new_boxes.remove(new_player_loc)
+            new_boxes.add(new_box)
+            new_state = (new_player_loc, frozenset(new_boxes))
+
+        else:
+            new_state = (new_player_loc, boxes)
+        pos_moves.append(((dx,dy),new_state))
+
+    return pos_moves
+
+def find_dead_squares():
+    num_col = 0
+    for i in range(len(grid)):
+        cols = 0
+        for j in grid[i]:
+            cols +=1
+        num_col = max(num_col,cols)
+    dead_squares =set()
+    for i in range(len(grid)):
+        for j in range(num_col):
+            try: 
+                if grid[i][j] == ' ':
+                    grid[i][j] = '$'
+                    if (grid[i-1][j] == "#" or grid[i+1][j] == "#" ) and (grid[i][j-1] == "#" or grid[i][j+1] == "#"):
+                        dead_squares.add((i,j))
+                    grid[i][j] = ' '
+            except IndexError:
+                pass
+    return dead_squares
+                
+def win(state,end_spots):
+    _ ,boxes = state
+    if boxes == end_spots:
+        return True
+def solve():
+    global grid
+    while True:
+        choice = int(input('1: magic sokaban levels\n2: original'))
+        if choice not in (1,2):
+            continue
+        try:
+            level_number = int(input('1: pick your own level\n2: random'))
+            if level_number == 1: 
+                level_number = int(input('enter level 1-50 for original and 1-100 for magic sokoban'))
+                if (0<level_number<51 and choice == 2) or (0<level_number<101 and choice == 1) :
+                    break
+            elif level_number ==2 and choice == 2:
+                level_number = random.randint(1,50)
+                break
+            elif level_number ==2 and choice == 1:
+                level_number = random.randint(1,100)
+                break          
+        except ValueError:
+            pass
+
+    sokoban_mechanics.load_level(level_number,choice )
+    grid = sokoban_mechanics.grid
+    num_col = 0
+    for i in range(len(grid)):
+        cols = 0
+        for j in grid[i]:
+            cols +=1
+        num_col = max(num_col,cols)
+    player_loc , box_positions,end_spots = start_state(num_col)
+    end_spots = set(end_spots)
+    box_positions = set(box_positions)
+    sokoban_mechanics.print_grid()
+    path = solver(player_loc,box_positions,end_spots)
+    if path != None:
+        for r,c in path:
+            if r == 1: direction = 'down'
+            elif r==-1: direction = 'up'
+            elif c==1: direction = 'right'
+            elif c== -1: direction = 'left'
+            sokoban_mechanics.movement(direction)
+            player_loc = (r,c)
+            sokoban_mechanics.print_grid()
+            time.sleep(0.2)
+    else:
+        print('path not found')
+
+solve()
