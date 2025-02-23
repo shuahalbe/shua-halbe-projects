@@ -1,0 +1,61 @@
+import pygame
+import mechanics
+import math
+import time
+import solver
+
+size = int(input('what size should game be'))
+choose = int(input('1: solver yourself\n2: solver'))
+grid = mechanics.create_puzzle(size)
+if choose == 2:path = solver.solver(grid,size)
+if path == None:
+    print('no solution')
+    exit()
+
+pygame.init()
+screen = pygame.display.set_mode((800,600))
+pygame.display.set_caption("lights out")
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+BLUE = (0,0,255)
+RED = (255,0,0) 
+GRAY = (105,105,105)
+clock = pygame.time.Clock()
+font = pygame.font.Font(None, 100)
+
+block_size = 600/size
+def create_blocks(size,grid):
+    pygame.draw.rect(screen,BLACK,(100,0,600,600))
+    for row in range(size):
+        for col in range(size):
+            if grid[row][col]:
+                pygame.draw.rect(screen,WHITE,(100+(col*block_size)+1,row*block_size+1,block_size-2,block_size-2))
+            else:
+                pygame.draw.rect(screen,GRAY,(100+(col*block_size)+1,row*block_size+1,block_size-2,block_size-2))
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if choose == 1:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                x,y = event.pos
+                if 100<=x<=700 and 0<=y<=600:
+                    col,row = math.floor((x-100)/block_size), math.floor(y/block_size)
+                    grid = mechanics.move(row,col,grid,size)
+    if choose == 2:
+        row,col = path.pop(0)
+        grid = mechanics.move(row,col,grid,size)
+        time.sleep(2)
+                    
+    screen.fill(RED)
+    create_blocks(size,grid)
+    pygame.display.flip()
+    if mechanics.win(grid,size):
+        time.sleep(5)
+        running = False
+    clock.tick(30)
+
+
+
