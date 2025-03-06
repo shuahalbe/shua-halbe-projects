@@ -89,8 +89,7 @@ def display_dice(game,number,input_string,bet,turn,end_round):
     space_width = width/num_players
     for i in range(len(game)):
         for j in range(len(game[i])):
-            #if end_round or i == turn-1 and turn <= num_real_player:
-            if i<10000000:
+            if end_round or i == turn-1 and turn <= num_real_player:
                 image = images[game[i][j]-1]
             else:
                 image = images[6]
