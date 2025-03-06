@@ -1,0 +1,245 @@
+import perudo_computer
+import pygame
+import tkinter as tk
+import time
+import os
+import random
+
+def image_collect():
+    image_directory = r"C:\Users\halbj\OneDrive\Documents\python projects\perudo game\dices"
+    image_files = [f for f in os.listdir(image_directory) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))]
+
+    images = []
+    for filename in image_files:
+        image_path = os.path.join(image_directory, filename)
+        try:
+            image = pygame.image.load(image_path)
+            images.append(image)
+        except pygame.error as e:
+            print(f"Error loading image: {image_path} - {e}")
+    return images
+
+def get_maximized_window_size():
+    root = tk.Tk()
+    root.withdraw()
+    root.state('zoomed')
+    root.update_idletasks()
+    width = root.winfo_width()
+    height = root.winfo_height()
+    root.destroy()
+    return width, height
+
+images = image_collect()
+width, height = get_maximized_window_size()
+pygame.init()
+screen = pygame.display.set_mode((width,height))
+pygame.display.set_caption("perudo")
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+BLUE = (0,0,255)
+RED = (255,0,0) 
+GRAY = (105,105,105)
+clock = pygame.time.Clock()
+font = pygame.font.Font(None, 40)
+
+def get_num_players():
+    input_string = ''
+    got = False
+    writing = 'please enter total num players and enter to exit (max 6 players)'
+    total_players = ''
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.KEYDOWN:
+                if event.unicode.isdigit():
+                    input_string = input_string + event.unicode
+                elif event.key == pygame.K_RETURN:
+                    if 1<int(input_string) <7:
+                        if not got:
+                            total_players = input_string 
+                            input_string = ''
+                            got = True
+                            writing = 'enter num real players (max same or lower as before)'
+                    try:
+                        if int(input_string)<=int(total_players) and int(input_string)>0:
+                            if got:
+                                running = False
+                                return input_string , total_players
+                    except (ValueError,IndexError):
+                        pass
+                elif event.key == pygame.K_BACKSPACE:
+                    input_string = input_string[:-1]
+        screen.fill(RED)
+        write = font.render(writing, True, BLACK)
+        num_players = font.render(input_string, True, BLACK)  
+        screen.blit(num_players, (100, 140))
+        screen.blit(write,(100,100))
+        pygame.display.flip()
+        clock.tick(30)
+
+num_real_player , num_players = get_num_players()
+num_players,num_real_player = int(num_players), int(num_real_player)
+num_dice = [5 for i in range(num_players)]
+game =[[random.randint(1,6) for col in range(num_dice[row])] for row in range(num_players)]
+
+def display_dice(game,number,input_string,bet,turn,end_round):
+    new_width ,new_height = 50,50
+    space_width = width/num_players
+    for i in range(len(game)):
+        for j in range(len(game[i])):
+            #if end_round or i == turn-1 and turn <= num_real_player:
+            if i<10000000:
+                image = images[game[i][j]-1]
+            else:
+                image = images[6]
+            scaled_image = pygame.transform.scale(image, (new_width, new_height))
+            image_rect = scaled_image.get_rect()
+            if j<2: offset = 0
+            elif j<4: offset = 55
+            else: offset = 110
+            if j%2 != 0 and i !=0:
+                image_rect.topleft = (space_width*(i-1)+10, 10+offset)
+            elif j%2 == 0 and i!=0:
+                image_rect.topleft = (space_width*(i-1)+65, 10+offset)
+            elif j%2 != 0 and i ==0:
+                image_rect.topleft = (width/2 -27, height-70-offset)
+            elif j%2 == 0 and i==0:
+                image_rect.topleft = (width/2 + 27, height-70-offset)
+            screen.blit(scaled_image, image_rect)
+
+    image = images[7]
+    scaled_image = pygame.transform.scale(image, (100, 100))
+    image_rect = scaled_image.get_rect()
+    image_rect.topleft = (width/2 + 250, height-250)
+    screen.blit(scaled_image, image_rect)
+    if number: writing = 'please enter enter how many of that you want to do (or U to go back)'
+    else: writing = 'which number would you like to bet on (enter to continue)'
+    write = font.render(writing, True, BLACK)
+    input_render = font.render(input_string, True, BLACK)
+    chosen_number,amount = bet 
+    bet_string = 'bet currently: number: '+str(chosen_number)+' amount: '+ str(amount)
+    bet_render = font.render(bet_string, True, BLACK)
+    screen.blit(bet_render,(50,height - 240))
+    screen.blit(input_render,(50,height-180))
+    screen.blit(write,(50,height-210))
+
+def legal(bet,new_bet):
+    number,amount = bet
+    new_number, new_amount = new_bet
+    if number != 0:
+        if (new_amount> amount and number!=1) or (new_amount>amount and number==1 and new_number==1): return True
+        elif new_amount == amount and new_number>number and number!=1: return True
+        elif number == 1 and new_amount> amount*2: return True
+        elif new_number == 1 and new_amount>= amount//2: return True
+    else:
+        if new_number != 1: return True
+
+def liar(bet):
+    number , amount = bet
+    tally = 0
+    for i in range(len(game)):
+        for j in range(len(game[i])):
+            if game[i][j] in (number,1): tally +=1
+    return tally, amount
+
+running = True
+number = False
+liar_called = False
+turn = random.randint(1,num_players)
+input_string = ''
+bet = (0,0)
+previous_bets = []
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if turn <= num_real_player:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_u:
+                    number = False
+                    input_string = ''
+                if event.unicode.isdigit():
+                    input_string = input_string + event.unicode
+                elif event.key == pygame.K_RETURN:
+                    try:
+                        if not number: 
+                            if 1<=int(input_string) <7:
+                                number = True
+                                chosen_number = int(input_string)
+                                input_string = ''
+                        else: 
+                            if 1<= int(input_string):
+                                if legal(bet,new_bet=(chosen_number,int(input_string))):
+                                    bet = (chosen_number,int(input_string))
+                                    previous_bets.insert(0,bet)
+                                    number = False
+                                    if turn < num_players:turn +=1
+                                    else: turn = 1
+                                    input_string = ''
+                                else:
+                                    input_string = '  illegal bet please go again'
+                                    display_dice(game,number,input_string,bet,turn,end_round=False)
+                                    pygame.display.flip()
+                                    time.sleep(2)
+                                    input_string = ''
+                    except (IndexError,ValueError):
+                        pass
+                elif event.key == pygame.K_BACKSPACE:
+                    input_string = input_string[:-1]
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+                x , y = mouse_pos
+                if (width/2 + 250)<x<(width/2 + 350) and (height-250)<y<(height - 150):
+                    liar_called = True
+        
+        else:
+            best_move = perudo_computer.get_move(num_dice,game,bet,turn,previous_bets)
+            if best_move == 'liar':
+                liar_called = True
+            else:
+                bet = best_move
+                previous_bets.insert(0,bet)
+                if turn<num_players: turn +=1
+                else: turn =1
+            if not liar_called:
+                chosen_number,amount = bet
+                bet_string = 'bot bet: number: '+str(chosen_number)+' amount: '+ str(amount)
+                bet_render = font.render(bet_string, True, BLACK)
+                screen.blit(bet_render,(50,height - 280))
+                pygame.display.flip()
+                time.sleep(0.5)
+
+    if liar_called:
+        tally , amount = liar(bet)
+        number_to_print , _ = bet
+        display_dice(game,number,input_string,bet,turn,end_round=True)
+        writing = 'total number of '+str(number_to_print)+'s is '+ str(tally)
+        write = font.render(writing, True, BLACK)
+        screen.blit(write,(50,height/2))
+        pygame.display.flip()
+        time.sleep(3)
+        bet = (0,0)
+        previous_bets = []
+        liar_called = False
+        if tally >= amount:
+            num_dice[turn-1] = num_dice[turn-1]-1
+        else:
+            if turn != 1:
+                num_dice[turn-2] = num_dice[turn-2]-1
+                turn = turn-1
+            else:
+                num_dice[num_players-1] = num_dice[num_players-1]-1
+                turn = num_players
+        for i in range(len(game)):
+            if not game[i]: del game[i]
+        if len(game) ==1:
+            exit()
+        game = [[random.randint(1,6) for col in range(num_dice[row])] for row in range(num_players)]
+
+    screen.fill(RED)
+    display_dice(game,number,input_string,bet,turn,end_round=False)
+    pygame.display.flip()
+    clock.tick(20)
+
