@@ -1,0 +1,229 @@
+import pygame
+import tkinter as tk
+import time
+import os
+import poker_ai
+import poker_state
+
+def image_collect():
+    image_directory = r"C:\Users\halbj\OneDrive\Documents\python projects\poker game\cards"
+    image_files = [f for f in os.listdir(image_directory) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))]
+
+    images = []
+    for filename in image_files:
+        image_path = os.path.join(image_directory, filename)
+        try:
+            image = pygame.image.load(image_path)
+            images.append(image)
+        except pygame.error as e:
+            print(f"Error loading image: {image_path} - {e}")
+    return images
+
+def get_maximized_window_size():
+    root = tk.Tk()
+    root.withdraw()
+    root.state('zoomed')
+    root.update_idletasks()
+    width = root.winfo_width()
+    height = root.winfo_height()
+    root.destroy()
+    return width, height
+
+images = image_collect()
+width, height = get_maximized_window_size()
+pygame.init()
+screen = pygame.display.set_mode((width,height))
+pygame.display.set_caption("perudo")
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+BLUE = (0,0,255)
+RED = (255,0,0) 
+GRAY = (105,105,105)
+clock = pygame.time.Clock()
+font = pygame.font.Font(None, 40)
+
+def get_num_players():
+    input_string = ''
+    writing = 'please enter total num players and enter to exit (max 6 players)'
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.KEYDOWN:
+                if event.unicode.isdigit():
+                    input_string = input_string + event.unicode
+                elif event.key == pygame.K_RETURN:
+                    if 1<int(input_string) <7:
+                        return int(input_string)
+                elif event.key == pygame.K_BACKSPACE:
+                    input_string = input_string[:-1]
+        screen.fill(RED)
+        write = font.render(writing, True, BLACK)
+        num_players = font.render(input_string, True, BLACK)  
+        screen.blit(num_players, (100, 140))
+        screen.blit(write,(100,100))
+        pygame.display.flip()
+        clock.tick(30)
+
+num_players = get_num_players()
+game,state = poker_state.game_state(num_players)
+game = poker_state.inital_money(game)
+
+def display(pot,old_bet,choice,turn,round):
+    new_width ,new_height = 60,90
+    space_width = width/num_players
+    for i in range(num_players):
+        if round == 4 or i == 0:
+            card_1,card_2 = game[i]['cards']
+            image_1 = images[card_1]
+            image_2 = images[card_2]
+        else:
+            image_1 = images[0]
+            image_2 = images[0]
+        scaled_image_1 = pygame.transform.scale(image_1, (new_width, new_height))
+        scaled_image_2 = pygame.transform.scale(image_2, (new_width, new_height))
+        money = str(game[i]['money'])
+        image_rect_1 = scaled_image_1.get_rect()
+        image_rect_2 = scaled_image_2.get_rect()
+        if i !=0:
+            image_rect_1.topleft = (space_width*(i-1)+10, 10)
+            image_rect_2.topleft = (65+space_width*(i-1)+10, 10)
+        else:
+            image_rect_1.topleft = (width/2+32, height-120)
+            image_rect_2.topleft = (width/2-32, height-120)            
+        screen.blit(scaled_image_1, image_rect_1)
+        screen.blit(scaled_image_2, image_rect_2)
+        money_render = font.render(money, True, BLACK)
+        if i != 0: screen.blit(money_render,(32+space_width*(i-1)+10, 105))
+        else: screen.blit(money_render,(width/2, height-150))
+    if round == 0: amount = 0
+    elif round == 1: amount = 3
+    elif round ==2: amount =4
+    elif round in (3,4): amount = 5
+    board_images = []
+    for i in range(amount):
+        card = state[0]['board'][i]
+        board_images.append(images[card])
+    for i in range(5-amount):
+        board_images.append(images[0])
+    for i in range(5):
+        image = board_images[i]
+        scaled_image = pygame.transform.scale(image, (new_width, new_height))
+        image_rect = scaled_image.get_rect()
+        image_rect.topleft = ((width/2)+(i*63)-300,height/2-100)
+        screen.blit(scaled_image, image_rect)
+    if turn ==1:
+        choice_string = 'enter amount to bet, F to fold, C to check: choice = '+ choice
+        bet_render = font.render(choice_string, True, BLACK)
+        screen.blit(bet_render,(50,height - 240))       
+    bet_string = 'bet currently is '+str(old_bet)
+    bet_render = font.render(bet_string, True, BLACK)
+    screen.blit(bet_render,(50,height - 280)) 
+    pot_string = 'pot currently is '+str(pot)
+    pot_render = font.render(pot_string, True, BLACK)
+    screen.blit(pot_render,(50,height - 320)) 
+
+
+folded_players = []
+num_checks = 0
+num_bets = 0
+running = True
+turn = 1
+pot = 0
+old_bet = 0
+new_bet = 0
+choice = ''
+round = 0
+for i in range(num_players):
+    game[i]['already_placed'] = 0
+while running:
+    if turn in folded_players:
+        if turn != num_players: turn+=1
+        else: turn =1
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if turn ==1:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_c:
+                    choice = 'check'
+                elif event.key == pygame.K_f:
+                    choice = 'fold'
+                elif event.unicode.isdigit():
+                    choice =choice + event.unicode
+                elif event.key == pygame.K_BACKSPACE:
+                    choice = choice[:-1]
+                elif event.key == pygame.K_RETURN:
+                    try:
+                        if choice == 'fold':
+                            folded_players.append(1)
+                            turn+=1
+                        elif choice == 'check':
+                            if poker_state.legal(choice,old_bet):
+                                num_checks +=1
+                                turn+=1
+                        elif int(choice)<game[0]['money']:
+                            if poker_state.legal(choice,old_bet):
+                                game[0]['money'] = game[0]['money'] - (game[0]['already_placed'] -int(choice))
+                                game[0]['already_placed'] = int(choice)
+                                pot = pot+(game[0]['already_placed'] -int(choice))
+                                if int(choice)>old_bet:
+                                    num_bets = 1
+                                else:
+                                    num_bets +=1
+                                old_bet = int(choice)
+                                turn+=1
+                    except ValueError:
+                        pass
+                
+    if (num_checks == (num_players-len(folded_players))) or (num_bets ==(num_players-len(folded_players))):
+        round+=1
+    if round == 4 or len(folded_players)== len(game)-1:
+        winner_turn = poker_state.winner(game,folded_players,state)
+        display(pot,old_bet,choice,turn,round=4)
+        win_string = 'winner is '+ str(winner_turn)
+        pot_render = font.render(win_string, True, BLACK)
+        screen.blit(pot_render,(50,height - 360))
+        pygame.display.flip()
+        game[winner_turn-1]['money'] +=pot
+        time.sleep(5)
+        game,state = poker_state.give_card(game,state)
+        folded_players = []
+        num_checks = 0
+        num_bets = 0
+        pot = 0
+        old_bet = 0
+        new_bet = 0
+        choice = ''
+        round = 0
+    if turn !=1:
+        best_move = poker_ai.starting_state(pot,game,turn,state,round,old_bet,folded_players)
+        if best_move == 'fold':
+            folded_players.append(turn)
+            if turn<num_players:turn+=1
+            else:turn =1
+        elif best_move == 'call':
+            if old_bet != 0:
+                game[turn-1]['money'] = game[turn-1]['money'] - (game[turn-1]['already_placed'] -old_bet)
+                game[0]['already_placed'] = old_bet
+                pot = pot+(game[0]['already_placed'] -old_bet)
+                num_bets+=1
+                if turn<num_players:turn+=1
+                else:turn =1
+            else:
+                num_checks +=1
+                if turn<num_players:turn+=1
+                else:turn =1
+        elif best_move == 'raise':
+            old_bet+=50
+            game[turn-1]['money'] = game[turn-1]['money'] - (game[turn-1]['already_placed'] -old_bet)
+            game[0]['already_placed'] = old_bet
+            pot = pot+(game[0]['already_placed'] -old_bet)
+            if turn<num_players:turn+=1
+            else:turn =1
+
+    screen.fill(RED)
+    display(pot,old_bet,choice,turn,round)
+    pygame.display.flip()
+    clock.tick(20)
